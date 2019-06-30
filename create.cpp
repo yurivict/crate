@@ -18,7 +18,7 @@
 
 #define ERR(msg...) ERR2("creating a crate", msg)
 
-#define LOG(msg...) std::cerr << rang::fg::gray << "LOG(" << Util::tmSecMs() << "): " << msg << rang::style::reset << std::endl;
+#define LOG(msg...) std::cerr << rang::fg::gray << Util::tmSecMs() << ": " << msg << rang::style::reset << std::endl;
 
 #define SYSCALL(res, syscall, arg) Util::ckSyscallError(res, syscall, arg)
 
@@ -40,36 +40,42 @@ static std::string guessCrateName(const Spec &spec) {
 }
 
 static void removeRedundantJailParts(const std::string &jailPath, const Spec &spec) {
+
+  namespace Fs = Util::Fs;
+  
   // helpers
-  auto P = [&jailPath](const std::string &subdir) {
+  auto P = [&jailPath](const char *subdir) {
     return STR(jailPath << '/' << subdir);
   };
 
   // remove items
-  Util::Fs::rmdirFlat(P("boot"));
-  Util::Fs::rmdirFlat(P("bin"));
-  Util::Fs::unlink(P("usr/lib/include"));
-  Util::Fs::rmdirHierExcept(P("lib"), {P("lib/libz.so.6"), P("lib/libc.so.7"), P("lib/libthr.so.3")});
-  Util::Fs::rmdirHierExcept(P("usr/lib"), {P("usr/lib/liblzma.so.5"), P("usr/lib/libbz2.so.4")});
-  Util::Fs::rmdirHier(P("usr/lib32"));
-  Util::Fs::rmdirHier(P("usr/include"));
-  Util::Fs::rmdirHier(P("sbin"));
-  Util::Fs::rmdirHier(P("usr/sbin"));
-  Util::Fs::rmdirHierExcept(P("usr/libexec"), {P("usr/libexec/ld-elf.so.1")});
-  Util::Fs::rmdirHier(P("usr/share/dtrace"));
-  Util::Fs::rmdirHier(P("usr/share/doc"));
-  Util::Fs::rmdirHier(P("usr/share/examples"));
-  Util::Fs::rmdirHier(P("usr/share/bsdconfig"));
-  Util::Fs::rmdirHier(P("usr/share/games"));
-  Util::Fs::rmdirHier(P("usr/share/i18n"));
-  Util::Fs::rmdirHier(P("usr/share/man"));
-  Util::Fs::rmdirHier(P("usr/share/misc"));
-  Util::Fs::rmdirHier(P("usr/tests"));
-  Util::Fs::rmdir    (P("usr/src"));
-  Util::Fs::rmdir    (P("usr/obj"));
-  Util::Fs::rmdirHier(P("var/db/etcupdate"));
-  Util::Fs::rmdirHierExcept(P("usr/bin"), {P("usr/bin/gzip")});
-  Util::Fs::rmdirFlat(P("rescue"));
+  Fs::rmdirFlat(P("bin"));
+  Fs::rmdirHier(P("boot"));
+  Fs::rmdirHier(P("etc/periodic"));
+  Fs::unlink(P("usr/lib/include"));
+  Fs::rmdirHierExcept(P("lib"), {P("lib/libz.so.6"), P("lib/libc.so.7"), P("lib/libthr.so.3")});
+  Fs::rmdirHierExcept(P("usr/lib"), {P("usr/lib/liblzma.so.5"), P("usr/lib/libbz2.so.4")});
+  Fs::rmdirHier(P("usr/lib32"));
+  Fs::rmdirHier(P("usr/include"));
+  Fs::rmdirHier(P("sbin"));
+  Fs::rmdirHier(P("usr/sbin"));
+  Fs::rmdirHierExcept(P("usr/libexec"), {P("usr/libexec/ld-elf.so.1")});
+  Fs::rmdirHier(P("usr/share/dtrace"));
+  Fs::rmdirHier(P("usr/share/doc"));
+  Fs::rmdirHier(P("usr/share/examples"));
+  Fs::rmdirHier(P("usr/share/bsdconfig"));
+  Fs::rmdirHier(P("usr/share/games"));
+  Fs::rmdirHier(P("usr/share/i18n"));
+  Fs::rmdirHier(P("usr/share/man"));
+  Fs::rmdirHier(P("usr/share/misc"));
+  Fs::rmdirHier(P("usr/share/pc-sysinstall"));
+  Fs::rmdirHier(P("usr/share/openssl"));
+  Fs::rmdirHier(P("usr/tests"));
+  Fs::rmdir    (P("usr/src"));
+  Fs::rmdir    (P("usr/obj"));
+  Fs::rmdirHier(P("var/db/etcupdate"));
+  Fs::rmdirHierExcept(P("usr/bin"), {P("usr/bin/gzip")});
+  Fs::rmdirFlat(P("rescue"));
 }
 
 //
@@ -91,11 +97,7 @@ bool createCrate(const Args &args, const Spec &spec) {
   //Util::runCommand(STR("tar -xf " << baseArchive << " -C " << jailPath), "unpack the system base into the jail directory");
   Util::runCommand(STR("cat " << baseArchive << " | xz --decompress --threads=8 | tar -xf - -C " << jailPath), "unpack the system base into the jail directory");
 
-  // create a jail, if needed
-
   // install packages in the jail, if needed
-
-  // destroy the jail, if it was created
 
   // remove parts that aren't needed
   LOG("remove unnecessary parts")
