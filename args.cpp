@@ -117,8 +117,7 @@ void Args::validate() {
     // TODO
     break;
   default:
-    // nothing
-    break;
+    err("no command was given");
   }
 }
 
