@@ -1,0 +1,28 @@
+
+
+base:
+    keep: all
+    remove: bin/l*
+    remove: lib/libelf.so*
+
+pkg:
+    install: zeronet
+
+run:
+    service: zeronet
+
+net:
+    define_hostname: zeronet
+    inbound:
+        http:
+            port: 10001
+            route_to: 43110
+
+fs:
+    files:
+        log: /var/log/zeronet.log
+    dirs:
+        log: /var/log/zeronet
+
+options:
+    tor: external
