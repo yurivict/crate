@@ -12,5 +12,8 @@ all: crate
 crate: $(OBJS)
 	$(CXX) $(LDFLAGS) -o $@ $(OBJS)
 
+install:
+	install crate $(DESTDIR)$(PREFIX)/bin
+
 clean:
 	rm $(OBJS) crate
