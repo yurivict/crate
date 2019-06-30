@@ -1,51 +1,83 @@
 #include <stdio.h>
-#include <yaml.h>
+#include <stdlib.h>
+#include <string.h>
+#include <yaml-cpp/yaml.h>
+#include <rang.hpp>
 
-int xmain(int argc, char** argv) {
-  FILE *fh = fopen(argv[1], "r");
-  yaml_parser_t parser;
-  yaml_token_t  token;   /* new variable */
+#include "spec.h"
 
-  /* Initialize parser */
-  if(!yaml_parser_initialize(&parser))
-    fputs("Failed to initialize parser!\n", stderr);
-  if(fh == NULL)
-    fputs("Failed to open file!\n", stderr);
+#include <string>
+#include <iostream>
 
-  /* Set input file */
-  yaml_parser_set_input_file(&parser, fh);
+#define ERR(msg...) \
+  { \
+    std::cerr << rang::fg::red << "spec parser: " << msg << rang::style::reset << std::endl; \
+    exit(1); \
+  }
 
-  /* CODE HERE */
-    do {
-    yaml_parser_scan(&parser, &token);
-    switch(token.type)
-    {
-    /* Stream start/end */
-    case YAML_STREAM_START_TOKEN: puts(">>> STREAM START"); break;
-    case YAML_STREAM_END_TOKEN:   puts("<<< STREAM END");   break;
-    /* Token types (read before actual token) */
-    case YAML_KEY_TOKEN:   printf("--- (Key token)   "); break;
-    case YAML_VALUE_TOKEN: printf("--- (Value token) "); break;
-    /* Block delimeters */
-    case YAML_BLOCK_SEQUENCE_START_TOKEN: puts(">>> Start Block (Sequence)"); break;
-    case YAML_BLOCK_ENTRY_TOKEN:          puts(">>> Start Block (Entry)");    break;
-    case YAML_BLOCK_END_TOKEN:            puts("<<< End block");              break;
-    /* Data */
-    case YAML_BLOCK_MAPPING_START_TOKEN:  puts("[Block mapping]");            break;
-    case YAML_SCALAR_TOKEN:  printf("--- scalar %s \n", token.data.scalar.value); break;
-    /* Others */
-    default:
-      printf("Got token of type %d\n", token.type);
+Spec parseSpec(const std::string &fname) {
+
+  Spec spec;
+
+  // helper functions
+  auto isKey = [](auto &k, const char *s) {
+    return k.first.template as<std::string>() == s;
+  };
+  auto scalar = [](auto &node, std::string &out, const char *name) {
+    if (node.IsScalar()) {
+      out = node.template as<std::string>();
+    } else {
+      ERR("unsupported " << name << " object type " << node.Type())
     }
-    if(token.type != YAML_STREAM_END_TOKEN)
-      yaml_token_delete(&token);
-  } while(token.type != YAML_STREAM_END_TOKEN);
-  yaml_token_delete(&token);
-  /* END new code */
+  };
+  auto listOrScalar = [](auto &node, std::vector<std::string> &out, const char *name) {
+    if (node.IsSequence()) {
+      for (auto r : node)
+        out.push_back(r.template as<std::string>());
+    } else if (node.IsScalar()) {
+      out.push_back(node.template as<std::string>());
+    } else {
+      ERR("unsupported " << name << " object type " << node.Type())
+    }
+  };
 
-  /* Cleanup */
-  yaml_parser_delete(&parser);
-  fclose(fh);
-  return 0;
+  // parse the spec in yaml format
+  YAML::Node top = YAML::LoadFile(fname);
+
+  // top-level tags
+  for (auto k : top) {
+    if (isKey(k, "base")) {
+      for (auto b : k.second) {
+        if (isKey(b, "keep")) {
+          listOrScalar(b.second, spec.baseKeep, "base/keep");
+        } else if (isKey(b, "remove")) {
+          listOrScalar(b.second, spec.baseRemove, "base/remove");
+        } else {
+          ERR("unknown element base/" << b.first << " in spec")
+        }
+      }
+    } else if (isKey(k, "run")) {
+      for (auto b : k.second) {
+        if (isKey(b, "executable")) {
+          scalar(b.second, spec.runExecutable, "run/executable");
+        } else if (isKey(b, "service")) {
+          listOrScalar(b.second, spec.runService, "run/service");
+        } else {
+          ERR("unknown element run/" << b.first << " in spec")
+        }
+      }
+    } else {
+      ERR("unknown top-level element '" << k.first << "' in spec")
+    }
+  }
+
+  return spec;
+}
+
+void Spec::validate() const {
+  if (!runExecutable.empty()) {
+    if (runExecutable[0] != '/')
+      ERR("the executable path has to begin with '/', executable=" << runExecutable)
+  }
 }
 

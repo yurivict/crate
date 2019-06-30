@@ -1,2 +1,6 @@
+#pragma once
 
-bool createCrate(const Args &args);
+class Args;
+class Spec;
+
+bool createCrate(const Args &args, const Spec &spec);

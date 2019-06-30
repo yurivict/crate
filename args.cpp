@@ -1,10 +1,19 @@
 
 #include "args.h"
 
+#include <rang.hpp>
+
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
 #include <iostream>
+
+
+#define ERR(msg...) \
+  { \
+    std::cerr << rang::fg::red << "args: " << msg << rang::style::reset << std::endl; \
+    exit(1); \
+  }
 
 //
 // internals
@@ -97,6 +106,21 @@ static const char* getArgParam(int aidx, int argc, char** argv) {
 //
 // interface
 //
+
+void Args::validate() {
+  switch (cmd) {
+  case CmdCreate:
+    if (createSpec.empty())
+      ERR("the 'create' command requires the crate spec file as an argument (-s, --spec)")
+    break;
+  case CmdRun:
+    // TODO
+    break;
+  default:
+    // nothing
+    break;
+  }
+}
 
 Args parseArguments(int argc, char** argv) {
   Args args;

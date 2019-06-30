@@ -14,6 +14,8 @@ public:
 
   // run parameters
   //std::string createSpec;
+
+  void validate();
 };
 
 Args parseArguments(int argc, char** argv);

@@ -1,12 +1,16 @@
 
-SRCS=	main.cpp args.cpp config.cpp create.cpp jail.cpp
+SRCS=	main.cpp args.cpp spec.cpp create.cpp file.cpp jail.cpp util.cpp
 OBJS=   $(SRCS:.cpp=.o)
 
-CXXFLAGS+=  -I/usr/local/include -std=c++17
-LDFLAGS+=   -L/usr/local/lib -lyaml
+CXXFLAGS+=  -I/usr/local/include
+LDFLAGS+=   -L/usr/local/lib -lyaml-cpp
+
+CXXFLAGS+=  -Wall -std=c++17
 
 all: crate
 
 crate: $(OBJS)
 	$(CXX) $(LDFLAGS) -o $@ $(OBJS)
 
+clean:
+	rm $(OBJS) crate
