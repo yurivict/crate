@@ -13,7 +13,7 @@ crate: $(OBJS)
 	$(CXX) $(LDFLAGS) -o $@ $(OBJS)
 
 install:
-	install -s crate $(DESTDIR)$(PREFIX)/bin
+	install -s -m 04755 crate $(DESTDIR)$(PREFIX)/bin
 
 clean:
 	rm $(OBJS) crate
