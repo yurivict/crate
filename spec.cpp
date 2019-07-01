@@ -56,6 +56,14 @@ Spec parseSpec(const std::string &fname) {
           ERR("unknown element base/" << b.first << " in spec")
         }
       }
+    } else if (isKey(k, "pkg")) {
+      for (auto b : k.second) {
+        if (isKey(b, "install")) {
+          listOrScalar(b.second, spec.pkgInstall, "pkg/install");
+        } else {
+          ERR("unknown element pkg/" << b.first << " in spec")
+        }
+      }
     } else if (isKey(k, "run")) {
       for (auto b : k.second) {
         if (isKey(b, "executable")) {

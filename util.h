@@ -24,6 +24,19 @@
     exit(1); \
   }
 
+template<typename T>
+inline std::ostream& operator<<(std::ostream &os, const std::vector<T> &v) {
+  bool fst = true;
+  for (auto &e : v) {
+    if (fst)
+      fst = false;
+    else
+      os << " ";
+    os << e;
+  }
+  return os;
+}
+
 //
 // utility functions
 //

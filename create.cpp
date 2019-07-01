@@ -39,8 +39,28 @@ static std::string guessCrateName(const Spec &spec) {
     return spec.runService[0]; // XXX service might have arguments, etc.
 }
 
-static void removeRedundantJailParts(const std::string &jailPath, const Spec &spec) {
+static void notifyUserOfLongProcess(bool begin, const std::string &processName, const std::string &doingWhat) {
+  std::cout << rang::fg::blue;
+  std::cout << "==" << std::endl;
+  if (begin)
+    std::cout << "== Running " << processName << " in order to " << doingWhat << std::endl;
+  else
+    std::cout << "== " << processName << " has finished to " << doingWhat << std::endl;
+  std::cout << "==" << rang::fg::reset << std::endl;
+}
 
+static void installPackagesInJail(const std::string &jailPath, const std::vector<std::string> &pkgs) {
+  LOG("before installing packages")
+  Util::runCommand(STR("mount -t devfs / " << jailPath << "/dev"), "mount devfs in the jail directory");
+  notifyUserOfLongProcess(true, "pkg", STR("install the required packages: " << pkgs));
+  Util::runCommand(STR("ASSUME_ALWAYS_YES=yes /usr/sbin/chroot " << jailPath << " pkg install " << pkgs), "install the requested packages into the jail");
+  Util::runCommand(STR("ASSUME_ALWAYS_YES=yes /usr/sbin/chroot " << jailPath << " pkg delete -f pkg"), "remove the 'pkg' package from jail");
+  notifyUserOfLongProcess(false, "pkg", STR("install the required packages: " << pkgs));
+  Util::runCommand(STR("umount " << jailPath << "/dev"), "unmount devfs in the jail directory");
+  LOG("after installing packages")
+}
+
+static void removeRedundantJailParts(const std::string &jailPath, const Spec &spec) {
   namespace Fs = Util::Fs;
   
   // helpers
@@ -76,6 +96,10 @@ static void removeRedundantJailParts(const std::string &jailPath, const Spec &sp
   Fs::rmdirHier(P("var/db/etcupdate"));
   Fs::rmdirHierExcept(P("usr/bin"), {P("usr/bin/gzip")});
   Fs::rmdirFlat(P("rescue"));
+  if (!spec.pkgInstall.empty()) {
+    Fs::rmdirFlat(P("var/cache/pkg"));
+    Fs::rmdirFlat(P("var/db/pkg"));
+  }
 }
 
 //
@@ -94,10 +118,11 @@ bool createCrate(const Args &args, const Spec &spec) {
 
   // unpack the base archive
   LOG("unpacking the base archive")
-  //Util::runCommand(STR("tar -xf " << baseArchive << " -C " << jailPath), "unpack the system base into the jail directory");
-  Util::runCommand(STR("cat " << baseArchive << " | xz --decompress --threads=8 | tar -xf - -C " << jailPath), "unpack the system base into the jail directory");
+  Util::runCommand(STR("cat " << baseArchive << " | xz --decompress --threads=8 | tar -xf - --uname \"\" --gname \"\" -C " << jailPath), "unpack the system base into the jail directory");
 
   // install packages in the jail, if needed
+  if (!spec.pkgInstall.empty())
+    installPackagesInJail(jailPath, spec.pkgInstall);
 
   // remove parts that aren't needed
   LOG("remove unnecessary parts")
