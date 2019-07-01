@@ -12,8 +12,11 @@ all: crate
 crate: $(OBJS)
 	$(CXX) $(LDFLAGS) -o $@ $(OBJS)
 
-install:
+install: crate
 	install -s -m 04755 crate $(DESTDIR)$(PREFIX)/bin
+
+install-local: crate
+	sudo install -s -m 04755 -o 0 -g 0 crate crate.x
 
 clean:
 	rm $(OBJS) crate
