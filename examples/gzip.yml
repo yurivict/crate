@@ -1,10 +1,4 @@
 ---
-base:
-    remove:
-        - "/bin"
-        - "/sbin"
-        - "/usr/bin"
-        - "/usr/include"
 
 run:
     executable: /usr/bin/gzip

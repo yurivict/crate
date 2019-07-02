@@ -5,6 +5,8 @@
 #include <iomanip>
 #include <filesystem>
 
+#include <rang.hpp>
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
@@ -15,18 +17,13 @@
 
 #define SYSCALL(res, syscall, arg) Util::ckSyscallError(res, syscall, arg)
 
+// consts
+static const char sepFilePath = '/';
+static const char sepFileExt = '.';
+
 namespace Util {
 
 void runCommand(const std::string &cmd, const std::string &what) {
-  if (false) {
-    char ans = 'N';
-    std::cout << "About to run the command: " << cmd << std::endl;
-    std::cout << "Do you want to continue (Y/N)?" << std::endl;
-    std::cin >> ans;
-    if (ans != 'Y' && ans != 'y')
-      exit(1);
-  }
-
   int res = system(cmd.c_str());
   if (res == -1)
     std::cerr << "failed to " << what << ": the system error occurred: " << strerror(errno) << std::endl;
@@ -35,6 +32,30 @@ void runCommand(const std::string &cmd, const std::string &what) {
 
   if (res != 0)
     exit(1);
+}
+
+std::string runCommandGetOutput(const std::string &cmd, const std::string &what) {
+  // start the command
+  FILE *f = ::popen(cmd.c_str(), "r");
+  if (f == nullptr) {
+    std::cerr << rang::fg::red << "the external command failed (" << cmd << ")" << rang::style::reset << std::endl;
+    exit(1);
+  }
+  // read command's output
+  std::ostringstream ss;
+  char buf[1025];
+  size_t nbytes;
+  do {
+    nbytes = ::fread(buf, 1, sizeof(buf)-1, f);
+    if (nbytes > 0) {
+      buf[nbytes] = 0;
+      ss << buf;
+    }
+  } while (nbytes == sizeof(buf)-1);
+  // cleanup
+  ::fclose(f);
+  //
+  return ss.str();
 }
 
 void ckSyscallError(int res, const char *syscall, const char *arg) {
@@ -63,6 +84,13 @@ std::string tmSecMs() {
   }
 
   return STR(sec << "." << std::setw(3) << std::setfill('0') << usec/1000);
+}
+
+std::string filePathToBareName(const std::string &path) {
+  auto i = path.rfind(sepFilePath);
+  std::string p = (i != std::string::npos ? path.substr(i + 1) : path);
+  i = p.find(sepFileExt);
+  return i != std::string::npos ? p.substr(0, i) : p;
 }
 
 namespace Fs {
@@ -105,6 +133,18 @@ void rmdirHier(const std::string &dir) {
       unlink(entry.path());
   }
   rmdir(dir);
+}
+
+bool rmdirFlatExcept(const std::string &dir, const std::set<std::string> &except) {
+  bool someSkipped = false;
+  for (const auto &entry : fs::directory_iterator(dir))
+    if (except.find(entry.path()) == except.end())
+      unlink(entry.path());
+    else
+      someSkipped = true;
+  if (!someSkipped)
+    rmdir(dir);
+  return someSkipped;
 }
 
 bool rmdirHierExcept(const std::string &dir, const std::set<std::string> &except) {

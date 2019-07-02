@@ -28,13 +28,15 @@ int main(int argc, char** argv) {
   //
   // parse the arguments
   //
-  Args args = parseArguments(argc, argv);
+  unsigned numArgsProcessed = 0;
+  Args args = parseArguments(argc, argv, numArgsProcessed);
   args.validate();
 
   //
   // run the requested command
   //
   bool succ = false;
+  int returnCode = 0;
 
   switch (args.cmd) {
   case CmdCreate: {
@@ -43,11 +45,11 @@ int main(int argc, char** argv) {
     succ = createCrate(args, spec);
     break;
   } case CmdRun: {
-    //succ = runCrate(args);
+    succ = runCrate(args, argc - numArgsProcessed, argv + numArgsProcessed, returnCode);
     break;
   } case CmdNone: {
     break; // impossible
   }}
 
-  return succ ? 0 : 1;
+  return succ ? returnCode : 1;
 }

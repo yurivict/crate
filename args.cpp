@@ -7,6 +7,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <iostream>
+#include <fstream>
 
 
 #define ERR(msg...) \
@@ -114,19 +115,24 @@ void Args::validate() {
       ERR("the 'create' command requires the crate spec file as an argument (-s, --spec)")
     break;
   case CmdRun:
-    // TODO
+    if (runCrateFile.empty())
+      ERR("the 'run' command requires the crate file as an argument (-f, --file)")
+    if (!std::ifstream(runCrateFile).good())
+      ERR("the file passed to the 'run' command can't be opened: " << runCrateFile)
     break;
   default:
     err("no command was given");
   }
 }
 
-Args parseArguments(int argc, char** argv) {
+Args parseArguments(int argc, char** argv, unsigned &processed) {
   Args args;
 
   enum Loc {LocBeforeCmd, LocAfterCmd};
   Loc loc = LocBeforeCmd;
-  for (unsigned a = 1; a < argc; a++) {
+  unsigned a;
+  bool stop = false;
+  for (a = 1; !stop && a < argc; a++) {
     switch (loc) {
     case LocBeforeCmd:
       if (auto argShort = isShort(argv[a])) {
@@ -134,14 +140,19 @@ Args parseArguments(int argc, char** argv) {
         case 'h':
           usage();
           exit(0);
+        case 'p':
+          args.logProgress = true;
+          break;
         default:
           err("unsupported short option '%s'", argv[a]);
         }
       } else if (auto argLong = isLong(argv[a])) {
-        std::cout << "argLong=" << argLong << std::endl;
         if (strEq(argLong, "help")) {
           usage();
           exit(0);
+        } else if (strEq(argLong, "log-progress")) {
+          args.logProgress = true;
+          break;
         } else {
           err("unsupported long option '%s'", argv[a]);
         }
@@ -174,7 +185,6 @@ Args parseArguments(int argc, char** argv) {
             err("unsupported short option '%s'", argv[a]);
           }
         } else if (auto argLong = isLong(argv[a])) {
-          std::cout << "argLong=" << argLong << std::endl;
           if (strEq(argLong, "help")) {
             usageCreate();
             exit(0);
@@ -192,19 +202,26 @@ Args parseArguments(int argc, char** argv) {
         }
         break;
       case CmdRun:
-        if (auto argShort = isShort(argv[a])) {
+        if (strEq(argv[a], "--")) {
+          stop = true;
+          break;
+        } else if (auto argShort = isShort(argv[a])) {
           switch (argShort) {
           case 'h':
             usageRun();
             exit(0);
+          case 'f':
+            args.runCrateFile = getArgParam(++a, argc, argv);
+            break;
           default:
             err("unsupported short option '%s'", argv[a]);
           }
         } else if (auto argLong = isLong(argv[a])) {
-          std::cout << "argLong=" << argLong << std::endl;
           if (strEq(argLong, "help")) {
             usage();
             exit(0);
+          } else if (strEq(argLong, "file")) {
+            args.runCrateFile = getArgParam(++a, argc, argv);
           } else {
             err("unsupported long option '%s'", argv[a]);
           }
@@ -215,6 +232,7 @@ Args parseArguments(int argc, char** argv) {
     }
   }
 
+  processed = a;
   return args;
 }
 

@@ -1,10 +1,10 @@
 
-SRCS=	main.cpp args.cpp spec.cpp create.cpp file.cpp jail.cpp util.cpp
+SRCS=	main.cpp args.cpp spec.cpp create.cpp run.cpp file.cpp util.cpp
 OBJS=   $(SRCS:.cpp=.o)
 
 PREFIX   ?=  /usr/local
 CXXFLAGS +=  `pkg-config --cflags yaml-cpp`
-LDFLAGS  +=  `pkg-config --libs yaml-cpp`
+LDFLAGS  +=  `pkg-config --libs yaml-cpp` -ljail
 
 CXXFLAGS+=  -Wall -std=c++17
 
@@ -21,3 +21,8 @@ install-local: crate
 
 clean:
 	rm -f $(OBJS) crate
+
+# shortcuts
+a: all
+c: clean
+l: install-local
