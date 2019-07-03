@@ -1,0 +1,20 @@
+---
+
+base:
+    keep:
+        - /bin/date
+        - /bin/cat
+        - /usr/bin/uname
+        - /usr/bin/basename
+        - /usr/bin/printf
+
+pkg:
+    install:
+        - kodi
+        - mesa-dri
+
+run:
+    executable: /usr/local/bin/kodi
+
+options:
+    - x11
