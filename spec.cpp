@@ -74,6 +74,9 @@ Spec parseSpec(const std::string &fname) {
           ERR("unknown element run/" << b.first << " in spec")
         }
       }
+    } else if (isKey(k, "options")) {
+      for (auto o : k.second)
+        spec.options.insert(o.template as<std::string>());
     } else {
       ERR("unknown top-level element '" << k.first << "' in spec")
     }

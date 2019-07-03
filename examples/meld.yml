@@ -1,0 +1,11 @@
+---
+
+pkg:
+    install:
+        - meld
+
+run:
+    executable: /usr/local/bin/meld
+
+options:
+    - x11

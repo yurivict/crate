@@ -4,11 +4,13 @@
 #include <iostream>
 #include <iomanip>
 #include <filesystem>
+#include <functional>
 
 #include <rang.hpp>
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <fcntl.h>
 #include <errno.h>
 #include <unistd.h>
 #include <sys/time.h>
@@ -97,6 +99,10 @@ namespace Fs {
 
 namespace fs = std::filesystem;
 
+void chown(const std::string &path, uid_t owner, gid_t group) {
+  SYSCALL(::chown(path.c_str(), owner, group), "chown", path.c_str());
+}
+
 void unlink(const std::string &file) {
   auto res = ::unlink(file.c_str());
   if (res == -1 && errno == EPERM) { // this unlink function clears the schg extended flag in case of EPERM, because in our context EPERM often indicates schg
@@ -105,6 +111,10 @@ void unlink(const std::string &file) {
     return;
   }
   SYSCALL(res, "unlink (1)", file.c_str());
+}
+
+void mkdir(const std::string &dir, mode_t mode) {
+  SYSCALL(::mkdir(dir.c_str(), mode), "mkdir", dir.c_str());
 }
 
 void rmdir(const std::string &dir) {
@@ -163,6 +173,61 @@ bool rmdirHierExcept(const std::string &dir, const std::set<std::string> &except
   if (cntSkip == 0)
     rmdir(dir);
   return cntSkip > 0;
+}
+
+char isElfFileOrDir(const std::string &file) { // find if the file is a regular file, has the exec bit set, and has the signature of the ELF file
+  int res;
+
+  struct stat sb;
+  res = ::stat(file.c_str(), &sb);
+  if (res == -1) {
+    WARN("isElfFile: failed to stat the file '" << file << "': " << strerror(errno))
+    return 'N'; // ? what else to do after the above
+  }
+
+  if (sb.st_mode & S_IFDIR)
+    return 'D';
+
+  if (sb.st_mode & S_IFREG && sb.st_mode & S_IXUSR && sb.st_size > 0x80) { // this reference claims that ELF can be as small as 142 bytes: http://timelessname.com/elfbin/
+    uint8_t signature[4];
+    // read the signature
+    int fd = ::open(file.c_str(), O_RDONLY);
+    if (fd == -1) {
+      WARN("isElfFile: failed to open the file '" << file << "': " << strerror(errno))
+      return 'N'; // ? what else to do after the above
+    }
+    auto res = ::read(fd, signature, sizeof(signature));
+    if (res == -1)
+      WARN("isElfFile: failed to read signature from '" << file << "': " << strerror(errno))
+    if (::close(fd) == -1)
+      WARN("isElfFile: failed to close the file '" << file << "': " << strerror(errno))
+    // decide
+    return res == 4 && signature[0]==0x7f && signature[1]==0x45 && signature[2]==0x4c && signature[3]==0x46 ? 'E' : 'N';
+  } else {
+    return 'N';
+  }
+}
+
+std::set<std::string> findElfFiles(const std::string &dir) {
+  std::set<std::string> s;
+  std::function<void(const std::string&)> addElfFilesToSet;
+  addElfFilesToSet = [&s,&addElfFilesToSet](const std::string &dir) {
+    for (const auto &entry : fs::directory_iterator(dir))
+      switch (isElfFileOrDir(entry.path())) {
+      case 'E':
+        s.insert(entry.path());
+        break;
+      case 'D':
+        addElfFilesToSet(entry.path());
+        break;
+      default:
+        ; // do nothing
+      }
+  };
+
+  addElfFilesToSet(dir);
+
+  return s;
 }
 
 }

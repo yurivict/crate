@@ -1,5 +1,6 @@
 #include <string>
 #include <vector>
+#include <set>
 
 class Spec {
 public:
@@ -11,7 +12,11 @@ public:
   std::string                runExecutable; // 0..1 executables can be run
   std::vector<std::string>   runService;    // 0..oo services can be run
 
+  std::set<std::string>      options;       // various options that this spec uses
+
   void validate() const;
+
+  bool optionExists(const char* opt) const {return options.find(opt) != options.end();}
 };
 
 Spec parseSpec(const std::string &fname);
