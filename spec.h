@@ -11,7 +11,7 @@ public:
   std::vector<std::string>   pkgAdd;        // 0..oo packages to install
 
   std::string                runExecutable; // 0..1 executables can be run
-  std::vector<std::string>   runService;    // 0..oo services can be run
+  std::vector<std::string>   runServices;   // 0..oo services can be run
 
   std::set<std::string>      options;       // various options that this spec uses
 

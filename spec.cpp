@@ -73,7 +73,7 @@ Spec parseSpec(const std::string &fname) {
         if (isKey(b, "executable")) {
           scalar(b.second, spec.runExecutable, "run/executable");
         } else if (isKey(b, "service")) {
-          listOrScalar(b.second, spec.runService, "run/service");
+          listOrScalar(b.second, spec.runServices, "run/service");
         } else {
           ERR("unknown element run/" << b.first << " in spec")
         }

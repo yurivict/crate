@@ -43,7 +43,7 @@ static std::string guessCrateName(const Spec &spec) {
   if (!spec.runExecutable.empty())
     return spec.runExecutable.substr(spec.runExecutable.rfind('/') + 1);
   else
-    return spec.runService[0]; // XXX service might have arguments, etc.
+    return spec.runServices[0]; // XXX service might have arguments, etc.
 }
 
 static void notifyUserOfLongProcess(bool begin, const std::string &processName, const std::string &doingWhat) {
@@ -136,6 +136,14 @@ static void removeRedundantJailParts(const std::string &jailPath, const Spec &sp
   }
   for (auto &file : spec.baseKeep)
     keepFile(file);
+  if (!spec.runServices.empty()) {
+    keepFile("/usr/sbin/service");
+    keepFile("/bin/kenv");
+    keepFile("/bin/mkdir");
+    keepFile("/usr/bin/grep");
+    keepFile("/sbin/sysctl");
+    keepFile("/usr/bin/limits");
+  }
   keepFile("/bin/sh"); // allow to create a user in jail, the user has to have the default shell
   keepFile("/usr/bin/env"); // allow to pass environment to jail
   keepFile("/usr/sbin/pw"); // allow to add users in jail

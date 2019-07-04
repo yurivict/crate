@@ -117,6 +117,11 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
     setJailEnv("DISPLAY", display);
   }
 
+  // start services, if any
+  if (!spec.runServices.empty())
+    for (auto &service : spec.runServices)
+      runCommandInJail(STR("/usr/sbin/service " << service << " onestart"), "start the service in jail");
+
   // run the process
   int returnCode = 0;
   if (!spec.runExecutable.empty()) {
@@ -125,6 +130,11 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
     // XXX 256 gets returned, what does this mean???
     LOG("command has finished in jail: returnCode=" << returnCode)
   }
+
+  // stop services, if any
+  if (!spec.runServices.empty())
+    for (auto &service : spec.runServices)
+      runCommandInJail(STR("/usr/sbin/service " << service << " onestop"), "stop the service in jail");
 
   if (spec.optionExists("x11")) {
     Util::runCommand(STR("umount " << J("/tmp/.X11-unix")), "unmount nullfs for X11 socket in the jail directory");
