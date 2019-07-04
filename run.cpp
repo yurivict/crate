@@ -40,7 +40,7 @@ static const char *jailName = "_jail_run_";
 //
 
 bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
-  LOG("'create' command is invoked, " << argc << " arguments are provided")
+  LOG("'run' command is invoked, " << argc << " arguments are provided")
 
   int res;
 
