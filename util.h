@@ -60,6 +60,7 @@ std::string runCommandGetOutput(const std::string &cmd, const std::string &what)
 void ckSyscallError(int res, const char *syscall, const char *arg);
 std::string tmSecMs();
 std::string filePathToBareName(const std::string &path);
+std::string filePathToFileName(const std::string &path);
 
 namespace Fs {
 

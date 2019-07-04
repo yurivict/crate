@@ -95,6 +95,11 @@ std::string filePathToBareName(const std::string &path) {
   return i != std::string::npos ? p.substr(0, i) : p;
 }
 
+std::string filePathToFileName(const std::string &path) {
+  auto i = path.rfind(sepFilePath);
+  return i != std::string::npos ? path.substr(i + 1) : path;
+}
+
 namespace Fs {
 
 namespace fs = std::filesystem;
