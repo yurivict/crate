@@ -31,7 +31,7 @@
 #define SYSCALL(res, syscall, arg) Util::ckSyscallError(res, syscall, arg)
 
 // used paths
-static const char *baseArchive = "/home/yuri/jails-learning/base.txz";
+static const char *baseArchive = "/home/yuri/jails-learning/base.txz"; // ftp://ftp1.freebsd.org/pub/FreeBSD/snapshots/arm64/12.0-STABLE/base.txz
 static const char *jailDirectoryPath = "/home/yuri/github/crate";
 static const char *jailName = "_jail_create_";
 
