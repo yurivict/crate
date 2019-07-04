@@ -12,6 +12,7 @@ pkg:
     install:
         - kodi
         - mesa-dri
+        # - nvidia-driver
 
 run:
     executable: /usr/local/bin/kodi

@@ -4,6 +4,7 @@ pkg:
     install:
         - mesa-demos
         - mesa-dri
+        # - nvidia-driver
 
 run:
     executable: /usr/local/bin/glxgears
