@@ -88,6 +88,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
       jailEnv = jailEnv + ':';
     jailEnv = jailEnv + var + '=' + val;
   };
+  setJailEnv("CRATE", "yes"); // let the app know that it runs from the crate. CAVEAT if you remove this, the env(1) command below needs to be removed when there is no env
 
   // add the same user to jail, make group=user for now
   {
