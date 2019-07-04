@@ -257,6 +257,11 @@ std::set<std::string> findElfFiles(const std::string &dir) {
   return s;
 }
 
+bool hasExtension(const char *file, const char *extension) {
+  auto ext = ::strrchr(file, '.');
+  return ext != nullptr && ::strcmp(ext, extension) == 0;
+}
+
 }
 
 }

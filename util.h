@@ -42,6 +42,13 @@ inline std::ostream& operator<<(std::ostream &os, const std::vector<T> &v) {
   return os;
 }
 
+template<typename T>
+inline std::vector<T> operator+(const std::vector<T> &v1, const std::vector<T> &v2) {
+  std::vector<T> res = v1;
+  res.insert(res.end(), v2.begin(), v2.end());
+  return res;
+}
+
 //
 // utility functions
 //
@@ -67,6 +74,7 @@ bool rmdirHierExcept(const std::string &dir, const std::set<std::string> &except
 bool isXzArchive(const char *file);
 char isElfFileOrDir(const std::string &file); // returns 'E'LF, 'D'ir, or 'N'o
 std::set<std::string> findElfFiles(const std::string &dir);
+bool hasExtension(const char *file, const char *extension);
 
 }
 
