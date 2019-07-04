@@ -64,6 +64,7 @@ void rmdirFlat(const std::string &dir);
 void rmdirHier(const std::string &dir);
 bool rmdirFlatExcept(const std::string &dir, const std::set<std::string> &except);
 bool rmdirHierExcept(const std::string &dir, const std::set<std::string> &except);
+bool isXzArchive(const char *file);
 char isElfFileOrDir(const std::string &file); // returns 'E'LF, 'D'ir, or 'N'o
 std::set<std::string> findElfFiles(const std::string &dir);
 
