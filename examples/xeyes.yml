@@ -1,0 +1,15 @@
+---
+
+base:
+    keep:
+        - /bin/ls
+
+pkg:
+    install:
+        - xeyes
+
+run:
+    executable: /usr/local/bin/xeyes
+
+options:
+    - x11

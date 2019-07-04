@@ -1,0 +1,12 @@
+---
+
+pkg:
+    install:
+        - mesa-demos
+        - mesa-dri
+
+run:
+    executable: /usr/local/bin/glxgears
+
+options:
+    - x11
