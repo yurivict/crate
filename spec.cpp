@@ -60,6 +60,10 @@ Spec parseSpec(const std::string &fname) {
       for (auto b : k.second) {
         if (isKey(b, "install")) {
           listOrScalar(b.second, spec.pkgInstall, "pkg/install");
+        } else if (isKey(b, "add")) {
+          listOrScalar(b.second, spec.pkgAdd, "pkg/add");
+          std::cerr << "pkg/add tag is currently broken" << std::endl;
+          abort();
         } else {
           ERR("unknown element pkg/" << b.first << " in spec")
         }

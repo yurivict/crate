@@ -56,12 +56,27 @@ static void notifyUserOfLongProcess(bool begin, const std::string &processName, 
   std::cout << "==" << rang::fg::reset << std::endl;
 }
 
-static void installPackagesInJail(const std::string &jailPath, const std::vector<std::string> &pkgs) {
+static void installAndAddPackagesInJail(const std::string &jailPath, const std::vector<std::string> &pkgsInstall, const std::vector<std::string> &pkgsAdd) {
+  // mount devfs
   Util::runCommand(STR("mount -t devfs / " << jailPath << "/dev"), "mount devfs in the jail directory");
-  notifyUserOfLongProcess(true, "pkg", STR("install the required packages: " << pkgs));
-  Util::runCommand(STR("ASSUME_ALWAYS_YES=yes /usr/sbin/chroot " << jailPath << " pkg install " << pkgs), "install the requested packages into the jail");
+  // notify
+  notifyUserOfLongProcess(true, "pkg", STR("install the required packages: " << (pkgsInstall+pkgsAdd)));
+  // install
+  if (!pkgsInstall.empty())
+    Util::runCommand(STR("ASSUME_ALWAYS_YES=yes /usr/sbin/chroot " << jailPath << " pkg install " << pkgsInstall), "install the requested packages into the jail");
+  if (!pkgsAdd.empty()) {
+    for (auto &p : pkgsAdd) {
+      Util::runCommand(STR("cp " << p << " " << jailPath << "/tmp/"), "copy the package to add into the jail");
+      Util::runCommand(STR("ASSUME_ALWAYS_YES=yes /usr/sbin/chroot " << jailPath << " pkg add /tmp/" << Util::filePathToFileName(p)), "remove the added package files from jail");
+    }
+  }
+  // cleanup: delete the pkg package: it will not be needed any more, and delete the added package files
   Util::runCommand(STR("ASSUME_ALWAYS_YES=yes /usr/sbin/chroot " << jailPath << " pkg delete -f pkg"), "remove the 'pkg' package from jail");
-  notifyUserOfLongProcess(false, "pkg", STR("install the required packages: " << pkgs));
+  if (!pkgsAdd.empty())
+    Util::runCommand(STR("rm " << jailPath << "/tmp/*"), "remove the added package files from jail");
+  // notify
+  notifyUserOfLongProcess(false, "pkg", STR("install the required packages: " << (pkgsInstall+pkgsAdd)));
+  // unmount devfs
   Util::runCommand(STR("umount " << jailPath << "/dev"), "unmount devfs in the jail directory");
 }
 
@@ -127,7 +142,7 @@ static void removeRedundantJailParts(const std::string &jailPath, const Spec &sp
   keepFile("/usr/sbin/pwd_mkdb"); // allow to add users in jail
   keepFile("/usr/libexec/ld-elf.so.1"); // needed to run elf executables
 
-  if (!spec.pkgInstall.empty())
+  if (!spec.pkgInstall.empty() || !spec.pkgAdd.empty())
     for (auto &e : Fs::findElfFiles(J(prefix)))
       toJailPath(getElfDependencies(fromJailPath(e), jailPath, [isBasePath](const std::string &path) {return isBasePath(path);}), except);
 
@@ -159,7 +174,7 @@ static void removeRedundantJailParts(const std::string &jailPath, const Spec &sp
   Fs::rmdir    (J("/usr/obj"));
   Fs::rmdirHier(J("/var/db/etcupdate"));
   Fs::rmdirFlat(J("/rescue"));
-  if (!spec.pkgInstall.empty()) {
+  if (!spec.pkgInstall.empty() || !spec.pkgAdd.empty()) {
     Fs::rmdirFlat(J("/var/cache/pkg"));
     Fs::rmdirFlat(J("/var/db/pkg"));
   }
@@ -185,9 +200,9 @@ bool createCrate(const Args &args, const Spec &spec) {
   Util::runCommand(STR("cat " << baseArchive << " | xz --decompress --threads=8 | tar -xf - --uname \"\" --gname \"\" -C " << jailPath), "unpack the system base into the jail directory");
 
   // install packages in the jail, if needed
-  if (!spec.pkgInstall.empty()) {
+  if (!spec.pkgInstall.empty() || !spec.pkgAdd.empty()) {
     LOG("installing packages ...")
-    installPackagesInJail(jailPath, spec.pkgInstall);
+    installAndAddPackagesInJail(jailPath, spec.pkgInstall, spec.pkgAdd);
     LOG("done installing packages")
   }
 
