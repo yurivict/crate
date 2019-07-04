@@ -129,12 +129,19 @@ void Args::validate() {
 Args parseArguments(int argc, char** argv, unsigned &processed) {
   Args args;
 
-  // first, see if the command form is 'crate {name}.crate ...'
-  if (argc >= 2 && argv[1][0] != '-' && Util::Fs::isXzArchive(argv[1])) {
-    args.cmd = CmdRun;
-    args.runCrateFile = argv[1];
-    processed = 2;
-    return args;
+  // first, see if the command form is a shortened one: 'crate {name}.yml' or 'crate {name}.crate ...'
+  if (argc >= 2 && argv[1][0] != '-') {
+    if (argc == 2 && Util::Fs::hasExtension(argv[1], ".yml")) {
+      args.cmd = CmdCreate;
+      args.createSpec = argv[1];
+      processed = 2;
+      return args;
+    } else if (Util::Fs::hasExtension(argv[1], ".crate") && Util::Fs::isXzArchive(argv[1])) {
+      args.cmd = CmdRun;
+      args.runCrateFile = argv[1];
+      processed = 2;
+      return args;
+    }
   }
 
   enum Loc {LocBeforeCmd, LocAfterCmd};
