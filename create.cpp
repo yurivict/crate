@@ -186,9 +186,9 @@ bool createCrate(const Args &args, const Spec &spec) {
 
   // install packages in the jail, if needed
   if (!spec.pkgInstall.empty()) {
-    LOG("before installing packages")
+    LOG("installing packages ...")
     installPackagesInJail(jailPath, spec.pkgInstall);
-    LOG("after installing packages")
+    LOG("done installing packages")
   }
 
   // remove parts that aren't needed
