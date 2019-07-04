@@ -2,6 +2,7 @@
 #include "args.h"
 #include "spec.h"
 #include "util.h"
+#include "misc.h"
 #include "commands.h"
 
 #include <rang.hpp>
@@ -23,7 +24,12 @@ int main(int argc, char** argv) {
   //
   // adjust uid, make it equal to euid
   //
-  Util::ckSyscallError(setuid(geteuid()), "setuid", "geteuid()");
+  Util::ckSyscallError(::setuid(::geteuid()), "setuid", "geteuid()");
+
+  //
+  // create the jails directory if it doesn't yet exist
+  //
+  createJailsDirectoryIfNeeded();
 
   //
   // parse the arguments

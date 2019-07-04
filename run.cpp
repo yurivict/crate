@@ -2,6 +2,7 @@
 #include "args.h"
 #include "spec.h"
 #include "file.h"
+#include "locs.h"
 #include "util.h"
 #include "commands.h"
 
@@ -32,7 +33,6 @@ static uid_t myuid = getuid();
 static gid_t mygid = getgid();
 
 // used paths
-static const char *jailDirectoryPath = "/home/yuri/github/crate";
 static const char *jailName = "_jail_run_";
 
 //
@@ -45,7 +45,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   int res;
 
   // create the jail directory
-  auto jailPath = STR(jailDirectoryPath << "/" << jailName);
+  auto jailPath = STR(Locations::jailDirectoryPath << "/" << jailName);
   Util::Fs::mkdir(jailPath, S_IRUSR|S_IWUSR|S_IXUSR);
   auto J = [&jailPath](auto subdir) {
     return STR(jailPath << subdir);

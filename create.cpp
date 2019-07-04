@@ -3,6 +3,7 @@
 #include "spec.h"
 #include "file.h"
 #include "elf.h"
+#include "locs.h"
 #include "util.h"
 #include "commands.h"
 
@@ -32,7 +33,6 @@
 
 // used paths
 static const char *baseArchive = "/home/yuri/jails-learning/base.txz"; // ftp://ftp1.freebsd.org/pub/FreeBSD/snapshots/arm64/12.0-STABLE/base.txz
-static const char *jailDirectoryPath = "/home/yuri/github/crate";
 static const char *jailName = "_jail_create_";
 
 //
@@ -198,7 +198,7 @@ bool createCrate(const Args &args, const Spec &spec) {
   LOG("'create' command is invoked")
 
   // create a jail directory
-  auto jailPath = STR(jailDirectoryPath << "/" << jailName);
+  auto jailPath = STR(Locations::jailDirectoryPath << "/" << jailName);
   res = mkdir(jailPath.c_str(), S_IRUSR|S_IWUSR|S_IXUSR);
   if (res == -1)
     ERR("failed to create the jail directory '" << jailPath << "': " << strerror(errno))

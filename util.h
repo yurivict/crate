@@ -9,6 +9,8 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
+#include <rang.hpp>
+
 //
 // utility macros useful throughout the program
 //
