@@ -222,16 +222,18 @@ bool createCrate(const Args &args, const Spec &spec) {
   Util::runCommand(STR("cp " << args.createSpec << " " << jailPath << "/+CRATE.SPEC"), "copy the spec file into jail");
 
   // pack the jail into a .crate file
+  auto crateFileName = !args.createOutput.empty() ? args.createOutput : STR(guessCrateName(spec) << ".crate");
   LOG("creating the crate file")
   CrateFile::create(
     jailPath,
-    !args.createOutput.empty() ? args.createOutput : STR(guessCrateName(spec) << ".crate")
+    crateFileName
   );
 
   // remove the create directory
   LOG("removing the the jail directory")
   Util::Fs::rmdirHier(jailPath);
 
+  std::cout << "the crate file '" << crateFileName << "' has been created" << std::endl;
   LOG("'create' command has succeeded")
   return true;
 }
