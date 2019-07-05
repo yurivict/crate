@@ -94,5 +94,8 @@ void Spec::validate() const {
     if (runExecutable[0] != '/')
       ERR("the executable path has to begin with '/', executable=" << runExecutable)
   }
+  for (auto &o : options)
+    if (o != "x11")
+      ERR("the unknown option '" << o << "' is supplied")
 }
 
