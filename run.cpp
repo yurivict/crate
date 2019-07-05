@@ -18,6 +18,7 @@ extern "C" { // https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=238928
 #include <sys/uio.h>
 #include <jail.h>
 
+#include <string>
 #include <iostream>
 
 #define ERR(msg...) ERR2("running a crate container", msg)
@@ -34,6 +35,16 @@ static gid_t mygid = getgid();
 
 // used paths
 static const char *jailName = "_jail_run_";
+
+//
+// helpers
+//
+static std::string argsToString(int argc, char** argv) {
+  std::ostringstream ss;
+  for (int i = 0; i < argc; i++)
+    ss << " " << argv[i];
+  return ss.str();
+}
 
 //
 // interface
@@ -127,7 +138,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   int returnCode = 0;
   if (!spec.runExecutable.empty()) {
     LOG("running the command in jail: env=" << jailEnv)
-    returnCode = ::system(STR("jexec -U " << ::getenv("USER") << " " << jid << " /usr/bin/env \"" << jailEnv << "\" " << spec.runExecutable).c_str());
+    returnCode = ::system(STR("jexec -U " << ::getenv("USER") << " " << jid << " /usr/bin/env \"" << jailEnv << "\" " << spec.runExecutable << argsToString(argc, argv)).c_str());
     // XXX 256 gets returned, what does this mean???
     LOG("command has finished in jail: returnCode=" << returnCode)
   }
