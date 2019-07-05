@@ -74,6 +74,30 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
 
   auto jailXname = STR(Util::filePathToBareName(args.runCrateFile) << "_pid" << ::getpid());
 
+  // environment in jail
+  std::string jailEnv;
+  auto setJailEnv = [&jailEnv](auto var, auto val) {
+    if (!jailEnv.empty())
+      jailEnv = jailEnv + ':';
+    jailEnv = jailEnv + var + '=' + val;
+  };
+  setJailEnv("CRATE", "yes"); // let the app know that it runs from the crate. CAVEAT if you remove this, the env(1) command below needs to be removed when there is no env
+
+  // satisfy options, if any
+  if (spec.optionExists("x11")) {
+    LOG("x11 option is requested: mount the X11 socket in jail")
+    // create the X11 socket directory
+    Util::Fs::mkdir(J("/tmp/.X11-unix"), 0777);
+    // mount the X11 socket directory in jail
+    Util::runCommand(STR("mount -t nullfs /tmp/.X11-unix " << J("/tmp/.X11-unix")), "mount nullfs for X11 socket in the jail directory");
+    // DISPLAY variable copied to jail
+    auto *display = ::getenv("DISPLAY");
+    if (display == nullptr)
+      ERR("DISPLAY environment variable is not set")
+    setJailEnv("DISPLAY", display);
+  }
+
+  // create jail
   LOG("creating jail " << jailXname)
   res = jail_setv(JAIL_CREATE,
     "host.hostname", jailXname.c_str(),
@@ -92,15 +116,6 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
     Util::runCommand(STR("jexec " << jid << " " << cmd), descr);
   };
 
-  // environment in jail
-  std::string jailEnv;
-  auto setJailEnv = [&jailEnv](auto var, auto val) {
-    if (!jailEnv.empty())
-      jailEnv = jailEnv + ':';
-    jailEnv = jailEnv + var + '=' + val;
-  };
-  setJailEnv("CRATE", "yes"); // let the app know that it runs from the crate. CAVEAT if you remove this, the env(1) command below needs to be removed when there is no env
-
   // add the same user to jail, make group=user for now
   {
     auto user = ::getenv("USER");
@@ -113,20 +128,6 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
     runCommandInJail(STR("/usr/sbin/pw groupadd " << user << " -g " << mygid), "add the group in jail");
     LOG("add user " << user << " in jail")
     runCommandInJail(STR("/usr/sbin/pw useradd " << user << " -u " << myuid << " -g " << mygid << " -s /bin/sh -d " << homeDir << " " << user), "add the user in jail");
-  }
-
-  // satisfy options, if any
-  if (spec.optionExists("x11")) {
-    LOG("x11 option is requested: mount the X11 socket in jail")
-    // create the X11 socket directory
-    Util::Fs::mkdir(J("/tmp/.X11-unix"), 0777);
-    // mount the X11 socket directory in jail
-    Util::runCommand(STR("mount -t nullfs /tmp/.X11-unix " << J("/tmp/.X11-unix")), "mount nullfs for X11 socket in the jail directory");
-    // DISPLAY variable copied to jail
-    auto *display = ::getenv("DISPLAY");
-    if (display == nullptr)
-      ERR("DISPLAY environment variable is not set")
-    setJailEnv("DISPLAY", display);
   }
 
   // start services, if any
