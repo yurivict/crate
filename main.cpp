@@ -14,7 +14,7 @@
 int main(int argc, char** argv) {
 
   //
-  // can only run as at privileged level because we need to run chroot(8) and need to create jails
+  // can only run as a privileged user because we need to run chroot(8) and need to create jails
   //
   if (geteuid() != 0) {
     std::cerr << rang::fg::red << "crate has to run as root user" << rang::style::reset << std::endl;
