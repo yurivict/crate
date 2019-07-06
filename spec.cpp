@@ -45,7 +45,7 @@ Spec parseSpec(const std::string &fname) {
     }
   };
 
-  // parse the spec in yaml format
+  // parse the spec in the yaml format
   YAML::Node top = YAML::LoadFile(fname);
 
   // top-level tags
@@ -82,6 +82,26 @@ Spec parseSpec(const std::string &fname) {
           ERR("unknown element run/" << b.first << " in spec")
         }
       }
+    } else if (isKey(k, "dirs")) {
+      for (auto b : k.second) {
+        if (isKey(b, "share")) {
+          if (b.second.IsSequence()) {
+            for (auto oneShare : b.second) {
+              if (oneShare.IsScalar())
+                spec.dirsShare.push_back({oneShare.template as<std::string>(), oneShare.template as<std::string>()});
+              else if (oneShare.IsSequence() && oneShare.size() == 2) {
+                spec.dirsShare.push_back({oneShare[0].template as<std::string>(), oneShare[1].template as<std::string>()});
+              } else {
+                ERR("elements of the dirs/share list have to be scalars or lists of size two (fromDir, toDir)")
+              }
+            }
+          } else {
+            ERR("dirs/share has to be a list")
+          }
+        } else {
+          ERR("unknown element dirs/" << b.first << " in spec")
+        }
+      }
     } else if (isKey(k, "options")) {
       for (auto o : k.second)
         spec.options.insert(o.template as<std::string>());
@@ -107,10 +127,16 @@ Spec Spec::preprocess() const {
 }
 
 void Spec::validate() const {
+  auto isFullPath = [](const std::string &path) {
+    return path[0] == '/';
+  };
   if (!runExecutable.empty()) {
-    if (runExecutable[0] != '/')
-      ERR("the executable path has to begin with '/', executable=" << runExecutable)
+    if (!isFullPath(runExecutable))
+      ERR("the executable path has to be a full path, executable=" << runExecutable)
   }
+  for (auto &dirShare : dirsShare)
+    if (!isFullPath(dirShare.first) || !isFullPath(dirShare.second))
+      ERR("the shared directory paths have to be a full paths, share=" << dirShare.first << "->" << dirShare.second)
   for (auto &o : options)
     if (allOptions.find(o) == allOptions.end())
       ERR("the unknown option '" << o << "' is supplied")

@@ -109,6 +109,11 @@ bool fileExists(const std::string &path) {
   return ::stat(path.c_str(), &sb) == 0 && sb.st_mode & S_IFREG;
 }
 
+bool dirExists(const std::string &path) {
+  struct stat sb;
+  return ::stat(path.c_str(), &sb) == 0 && sb.st_mode & S_IFDIR;
+}
+
 void chown(const std::string &path, uid_t owner, gid_t group) {
   SYSCALL(::chown(path.c_str(), owner, group), "chown", path.c_str());
 }

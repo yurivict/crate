@@ -63,6 +63,14 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
     return STR(jailPath << subdir);
   };
 
+  // helpers
+  auto mountNullfs = [J](auto hostDir, auto jailDir, auto what) {
+    Util::runCommand(STR("mount -t nullfs " << hostDir << " " << J(jailDir)), CSTR("mount nullfs for " << what << " in the jail directory"));
+  };
+  auto unmountNullfs = [J](auto jailDir, auto what) {
+    Util::runCommand(STR("umount " << J(jailDir)), CSTR("unmount nullfs for " << what << " in the jail directory"));
+  };
+
   // extract the crate archive into the jail directory
   LOG("extracting the crate file " << args.runCrateFile << " into " << jailPath)
   Util::runCommand(STR("tar xf " << args.runCrateFile << " -C " << jailPath), "extract the crate file into the jail directory");
@@ -90,7 +98,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
     // create the X11 socket directory
     Util::Fs::mkdir(J("/tmp/.X11-unix"), 0777);
     // mount the X11 socket directory in jail
-    Util::runCommand(STR("mount -t nullfs /tmp/.X11-unix " << J("/tmp/.X11-unix")), "mount nullfs for X11 socket in the jail directory");
+    mountNullfs("/tmp/.X11-unix", "/tmp/.X11-unix", "X11 socket");
     // DISPLAY variable copied to jail
     auto *display = ::getenv("DISPLAY");
     if (display == nullptr)
@@ -142,6 +150,17 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
     runCommandInJail(STR("/usr/sbin/pw useradd " << user << " -u " << myuid << " -g " << mygid << " -s /bin/sh -d " << homeDir << " " << user), "add the user in jail");
   }
 
+  // share directories if requested
+  for (auto &dirShare : spec.dirsShare) {
+    // does the host directory exist?
+    if (!Util::Fs::dirExists(dirShare.first))
+      ERR("shared directory '" << dirShare.first << "' doesn't exist, can't run the app")
+    // create the directory in jail
+    Util::runCommand(STR("mkdir -p " << J(dirShare.second)), "create the shared directory in jail"); // TODO replace with API-based calls
+    // mount it as nullfs
+    mountNullfs(dirShare.first, dirShare.second, STR("shared directory '" << dirShare.second << "'"));
+  }
+
   // start services, if any
   if (!spec.runServices.empty())
     for (auto &service : spec.runServices)
@@ -163,12 +182,18 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
     for (auto &service : spec.runServices)
       runCommandInJail(STR("/usr/sbin/service " << service << " onestop"), "stop the service in jail");
 
+  // unshare directories if requested
+  for (auto &dirShare : spec.dirsShare) {
+    // unmount its nullfs mount
+    unmountNullfs(dirShare.second, STR("shared directory '" << dirShare.second << "'"));
+  }
+
   // rc-uninitializion (is this really needed?)
   //runCommandInJail("/bin/sh /etc/rc.shutdown", "exec.stop");
 
   // turn options off
   if (spec.optionExists("x11")) {
-    Util::runCommand(STR("umount " << J("/tmp/.X11-unix")), "unmount nullfs for X11 socket in the jail directory");
+    unmountNullfs("/tmp/.X11-unix", "X11 socket");
   }
   if (spec.optionExists("net")) {
     Util::runCommand(STR("ifconfig sk0 -alias " << ipv4), "enable networking in /etc/rc.conf");
