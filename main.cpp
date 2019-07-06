@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
   case CmdCreate: {
     auto spec = parseSpec(args.createSpec);
     spec.validate();
-    succ = createCrate(args, spec);
+    succ = createCrate(args, spec.preprocess());
     break;
   } case CmdRun: {
     succ = runCrate(args, argc - numArgsProcessed, argv + numArgsProcessed, returnCode);

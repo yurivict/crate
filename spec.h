@@ -16,7 +16,7 @@ public:
   std::set<std::string>      options;       // various options that this spec uses
 
   void validate() const;
-
+  Spec preprocess() const;
   bool optionExists(const char* opt) const {return options.find(opt) != options.end();}
 };
 

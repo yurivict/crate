@@ -1,12 +1,14 @@
+
+#include "spec.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <yaml-cpp/yaml.h>
 #include <rang.hpp>
 
-#include "spec.h"
-
 #include <string>
+#include <set>
 #include <iostream>
 
 #define ERR(msg...) \
@@ -14,6 +16,8 @@
     std::cerr << rang::fg::red << "spec parser: " << msg << rang::style::reset << std::endl; \
     exit(1); \
   }
+
+static std::set<std::string> allOptions = {"x11", "net", "ssl-certs"};
 
 Spec parseSpec(const std::string &fname) {
 
@@ -89,13 +93,26 @@ Spec parseSpec(const std::string &fname) {
   return spec;
 }
 
+// preprocess function processes some options, etc. for simplicity of use both by users and by out 'create' module
+Spec Spec::preprocess() const {
+  Spec spec = *this;
+
+  // expand the ssl-certs option
+  if (spec.optionExists("ssl-certs")) {
+    spec.options.erase("ssl-certs");
+    spec.pkgInstall.push_back("ca_root_nss");
+  }
+
+  return spec;
+}
+
 void Spec::validate() const {
   if (!runExecutable.empty()) {
     if (runExecutable[0] != '/')
       ERR("the executable path has to begin with '/', executable=" << runExecutable)
   }
   for (auto &o : options)
-    if (o != "x11" && o != "net")
+    if (allOptions.find(o) == allOptions.end())
       ERR("the unknown option '" << o << "' is supplied")
 }
 
