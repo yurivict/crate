@@ -18,7 +18,7 @@
     exit(1); \
   }
 
-static std::set<std::string> allOptions = {"x11", "net", "ssl-certs"};
+static std::set<std::string> allOptions = {"x11", "net", "ssl-certs", "dbg-ktrace"};
 
 Spec parseSpec(const std::string &fname) {
 
@@ -123,11 +123,23 @@ Spec parseSpec(const std::string &fname) {
 Spec Spec::preprocess() const {
   Spec spec = *this;
 
-  // expand the ssl-certs option
-  if (spec.optionExists("ssl-certs")) {
-    spec.options.erase("ssl-certs");
+  // helpers
+  auto O = [&spec](auto o, bool keep) {
+    if (spec.optionExists(o)) {
+      if (!keep)
+        spec.options.erase(o);
+      return true;
+    }
+    return false;
+  };
+
+  // ssl-certs option => install the ca_root_nss package
+  if (O("ssl-certs", false))
     spec.pkgInstall.push_back("ca_root_nss");
-  }
+
+  // dbg-ktrace option => keep the ktrace executable
+  if (O("dbg-ktrace", true))
+    spec.baseKeep.push_back("/usr/bin/ktrace");
 
   return spec;
 }

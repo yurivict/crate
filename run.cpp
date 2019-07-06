@@ -54,7 +54,9 @@ static std::string argsToString(int argc, char** argv) {
 bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   LOG("'run' command is invoked, " << argc << " arguments are provided")
 
+  // variables
   int res;
+  auto homeDir = STR("/home/" << user);
 
   // create the jail directory
   auto jailPath = STR(Locations::jailDirectoryPath << "/" << jailName);
@@ -139,7 +141,6 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
 
   // add the same user to jail, make group=user for now
   {
-    auto homeDir = STR("/home/" << user);
     LOG("create user's home directory " << homeDir << ", uid=" << myuid << " gid=" << mygid)
     Util::Fs::mkdir(J("/home"), 0755);
     Util::Fs::mkdir(J(homeDir), 0755);
@@ -172,6 +173,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
     LOG("running the command in jail: env=" << jailEnv)
     returnCode = ::system(CSTR("jexec -l -U " << user << " " << jid
                                << " /usr/bin/env " << jailEnv
+                               << (spec.optionExists("dbg-ktrace") ? " /usr/bin/ktrace" : "")
                                << " " << spec.runExecutable << argsToString(argc, argv)));
     // XXX 256 gets returned, what does this mean?
     LOG("command has finished in jail: returnCode=" << returnCode)
@@ -181,6 +183,9 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   if (!spec.runServices.empty())
     for (auto &service : spec.runServices)
       runCommandInJail(STR("/usr/sbin/service " << service << " onestop"), "stop the service in jail");
+
+  if (spec.optionExists("dbg-ktrace"))
+    Util::runCommand(STR("cp " << J(homeDir) << "/ktrace.out ."), "copy the ktrace.out out of jail");
 
   // unshare directories if requested
   for (auto &dirShare : spec.dirsShare) {
