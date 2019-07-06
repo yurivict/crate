@@ -174,6 +174,6 @@ void Spec::validate() const {
   // options must be from the supported set
   for (auto &o : options)
     if (allOptions.find(o) == allOptions.end())
-      ERR("the unknown option '" << o << "' is supplied")
+      ERR("the unknown option '" << o << "' was supplied")
 }
 
