@@ -69,10 +69,10 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   Util::runCommand(STR("tar xf " << args.runCrateFile << " -C " << jailPath), "extract the crate file into the jail directory");
 
   // parse +CRATE.SPEC
-  auto spec = parseSpec(STR(jailPath << "/+CRATE.SPEC"));
+  auto spec = parseSpec(J("/+CRATE.SPEC"));
 
   // mount devfs
-  Util::runCommand(STR("mount -t devfs / " << jailPath << "/dev"), "mount devfs in the jail directory");
+  Util::runCommand(STR("mount -t devfs / " << J("/dev")), "mount devfs in the jail directory");
 
   auto jailXname = STR(Util::filePathToBareName(args.runCrateFile) << "_pid" << ::getpid());
 
@@ -176,7 +176,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   }
 
   // unmount devfs
-  Util::runCommand(STR("umount " << jailPath << "/dev"), "unmount devfs in the jail directory");
+  Util::runCommand(STR("umount " << J("/dev")), "unmount devfs in the jail directory");
 
   // stop and remove jail
   LOG("removing jail " << jailXname << " jid=" << jid << " ...")
