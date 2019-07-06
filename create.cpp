@@ -56,28 +56,38 @@ static void notifyUserOfLongProcess(bool begin, const std::string &processName, 
   std::cout << "==" << rang::fg::reset << std::endl;
 }
 
+static void runChrootCommand(const std::string &jailPath, const std::string &cmd, const char *descr) {
+  Util::runCommand(STR("ASSUME_ALWAYS_YES=yes /usr/sbin/chroot " << jailPath << " " << cmd), descr);
+}
+
 static void installAndAddPackagesInJail(const std::string &jailPath, const std::vector<std::string> &pkgsInstall, const std::vector<std::string> &pkgsAdd) {
+  // local helpers
+  auto J = [&jailPath](auto subdir) {
+    return STR(jailPath << subdir);
+  };
   // mount devfs
-  Util::runCommand(STR("mount -t devfs / " << jailPath << "/dev"), "mount devfs in the jail directory");
+  Util::runCommand(STR("mount -t devfs / " << J("/dev")), "mount devfs in the jail directory");
   // notify
   notifyUserOfLongProcess(true, "pkg", STR("install the required packages: " << (pkgsInstall+pkgsAdd)));
   // install
   if (!pkgsInstall.empty())
-    Util::runCommand(STR("ASSUME_ALWAYS_YES=yes /usr/sbin/chroot " << jailPath << " pkg install " << pkgsInstall), "install the requested packages into the jail");
+    runChrootCommand(jailPath, STR("pkg install " << pkgsInstall), "install the requested packages into the jail");
   if (!pkgsAdd.empty()) {
     for (auto &p : pkgsAdd) {
-      Util::runCommand(STR("cp " << p << " " << jailPath << "/tmp/"), "copy the package to add into the jail");
-      Util::runCommand(STR("ASSUME_ALWAYS_YES=yes /usr/sbin/chroot " << jailPath << " pkg add /tmp/" << Util::filePathToFileName(p)), "remove the added package files from jail");
+      Util::runCommand(STR("cp " << p << " " << J("/tmp/")), "copy the package to add into the jail");
+      runChrootCommand(jailPath, STR("pkg add /tmp/" << Util::filePathToFileName(p)), "remove the added package files from jail");
     }
   }
+  // write the +CRATE.PKGS file
+  runChrootCommand(jailPath, STR("pkg info > " << J("/+CRATE.PKGS")), "write +CRATE.PKGS file");
   // cleanup: delete the pkg package: it will not be needed any more, and delete the added package files
-  Util::runCommand(STR("ASSUME_ALWAYS_YES=yes /usr/sbin/chroot " << jailPath << " pkg delete -f pkg"), "remove the 'pkg' package from jail");
+  runChrootCommand(jailPath, "pkg delete -f pkg", "remove the 'pkg' package from jail");
   if (!pkgsAdd.empty())
     Util::runCommand(STR("rm " << jailPath << "/tmp/*"), "remove the added package files from jail");
   // notify
   notifyUserOfLongProcess(false, "pkg", STR("install the required packages: " << (pkgsInstall+pkgsAdd)));
   // unmount devfs
-  Util::runCommand(STR("umount " << jailPath << "/dev"), "unmount devfs in the jail directory");
+  Util::runCommand(STR("umount " << J("/dev")), "unmount devfs in the jail directory");
 }
 
 static std::set<std::string> getElfDependencies(const std::string &elfPath, const std::string &jailPath,
@@ -218,7 +228,7 @@ bool createCrate(const Args &args, const Spec &spec) {
   LOG("removing unnecessary parts")
   removeRedundantJailParts(jailPath, spec);
 
-  // create +CRATE-* files
+  // write the +CRATE-SPEC file
   Util::runCommand(STR("cp " << args.createSpec << " " << jailPath << "/+CRATE.SPEC"), "copy the spec file into jail");
 
   // pack the jail into a .crate file
