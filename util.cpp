@@ -185,25 +185,25 @@ bool isXzArchive(const char *file) {
   struct stat sb;
   res = ::stat(file, &sb);
   if (res == -1)
-    return false; // can't stat: can't be a crate file
+    return false; // can't stat: can't be an XZ archive file
 
-  if (sb.st_mode & S_IFREG && sb.st_size > 0x100) { // the crate file can't be too small XXX this limit should be increased as well
+  if (sb.st_mode & S_IFREG && sb.st_size > 0x100) { // the XZ archive file can't be too small
     uint8_t signature[5];
     // read the signature
     int fd = ::open(file, O_RDONLY);
     if (fd == -1)
-      return false; // can't open: can't be a crate file
+      return false; // can't open: can't be an XZ archive
     auto res = ::read(fd, signature, sizeof(signature));
     if (res != sizeof(signature)) {
       (void)::close(fd);
-      return false; // can't read the file or read returned not 5: can't be a crate file
+      return false; // can't read the file or read returned not 5: can't be an XZ archive file
     }
     if (::close(fd) == -1)
-      return false; // failed to close the file: there is something wrong, we don't accept it as a crate file
+      return false; // failed to close the file: there is something wrong, we don't accept it as an XZ archive
     // check signature
     return signature[0]==0xfd && signature[1]==0x37 && signature[2]==0x7a && signature[3]==0x58 && signature[4]==0x5a;
   } else {
-    return false; // not a regular file: can't be a crate file
+    return false; // not a regular file: can't be an XZ archive file
   }
 }
 
