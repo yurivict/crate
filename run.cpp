@@ -67,8 +67,8 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   auto mountNullfs = [J](auto hostDir, auto jailDir, auto what) {
     Util::runCommand(STR("mount -t nullfs " << hostDir << " " << J(jailDir)), CSTR("mount nullfs for " << what << " in the jail directory"));
   };
-  auto unmountNullfs = [J](auto jailDir, auto what) {
-    Util::runCommand(STR("umount " << J(jailDir)), CSTR("unmount nullfs for " << what << " in the jail directory"));
+  auto unmountFsInJail = [J](auto jailDir, auto what) {
+    Util::runCommand(STR("umount " << J(jailDir)), CSTR("unmount " << what << " in the jail directory"));
   };
 
   // extract the crate archive into the jail directory
@@ -120,10 +120,10 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
     "path", jailPath.c_str(),
     "host.hostname", jailXname.c_str(),
     "ip4.addr", spec.optionExists("net") ? ipv4.c_str() : nullptr,
-    "persist", NULL,
+    "persist", nullptr,
     "allow.raw_sockets", spec.optionExists("net") ? "true" : "false",
     "allow.socket_af", spec.optionExists("net") ? "true" : "false",
-    NULL);
+    nullptr);
   if (res == -1)
     ERR("failed to create jail: " << jail_errmsg)
   int jid = res;
@@ -185,7 +185,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   // unshare directories if requested
   for (auto &dirShare : spec.dirsShare) {
     // unmount its nullfs mount
-    unmountNullfs(dirShare.second, STR("shared directory '" << dirShare.second << "'"));
+    unmountFsInJail(dirShare.second, STR("shared directory '" << dirShare.second << "'"));
   }
 
   // rc-uninitializion (is this really needed?)
@@ -193,14 +193,14 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
 
   // turn options off
   if (spec.optionExists("x11")) {
-    unmountNullfs("/tmp/.X11-unix", "X11 socket");
+    unmountFsInJail("/tmp/.X11-unix", "X11 socket");
   }
   if (spec.optionExists("net")) {
     Util::runCommand(STR("ifconfig sk0 -alias " << ipv4), "enable networking in /etc/rc.conf");
   }
 
   // unmount devfs
-  Util::runCommand(STR("umount " << J("/dev")), "unmount devfs in the jail directory");
+  unmountFsInJail("/dev", "/dev as devfs");
 
   // stop and remove jail
   LOG("removing jail " << jailXname << " jid=" << jid << " ...")
