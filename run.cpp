@@ -68,7 +68,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   Util::runCommand(STR("tar xf " << args.runCrateFile << " -C " << jailPath), "extract the crate file into the jail directory");
 
   // parse +CRATE.SPEC
-  auto spec = parseSpec(J("/+CRATE.SPEC"));
+  auto spec = parseSpec(J("/+CRATE.SPEC")).preprocess();
 
   // mount devfs
   Util::runCommand(STR("mount -t devfs / " << J("/dev")), "mount devfs in the jail directory");
