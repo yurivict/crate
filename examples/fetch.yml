@@ -1,0 +1,11 @@
+---
+
+pkg:
+    install:
+        - ca_root_nss
+
+run:
+    executable: /usr/bin/fetch
+
+options:
+    - net

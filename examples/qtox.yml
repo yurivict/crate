@@ -1,0 +1,12 @@
+---
+
+pkg:
+    install:
+        - qTox
+        - dbus
+
+run:
+    executable: /usr/local/bin/qtox
+
+options:
+    - x11

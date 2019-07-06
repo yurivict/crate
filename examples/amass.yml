@@ -1,0 +1,11 @@
+---
+
+pkg:
+    install:
+        - amass
+
+run:
+    executable: /usr/local/bin/amass
+
+options:
+    - net

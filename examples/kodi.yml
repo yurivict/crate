@@ -12,7 +12,9 @@ pkg:
     install:
         - kodi
         - mesa-dri
-        # - nvidia-driver
+        - nvidia-driver
+        - liberation-fonts-ttf
+        - dejavu
 
 run:
     executable: /usr/local/bin/kodi

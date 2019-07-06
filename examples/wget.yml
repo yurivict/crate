@@ -1,0 +1,12 @@
+---
+
+pkg:
+    install:
+        - wget
+        - ca_root_nss
+
+run:
+    executable: /usr/local/bin/wget
+
+options:
+    - net
