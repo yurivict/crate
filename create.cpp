@@ -216,7 +216,7 @@ bool createCrate(const Args &args, const Spec &spec) {
     std::cout << "base.txz has finished downloading" << std::endl;
   }
 
-  // create a jail directory
+  // create the jail directory
   auto jailPath = STR(Locations::jailDirectoryPath << "/" << jailName);
   res = mkdir(jailPath.c_str(), S_IRUSR|S_IWUSR|S_IXUSR);
   if (res == -1)
@@ -228,7 +228,7 @@ bool createCrate(const Args &args, const Spec &spec) {
                        << " | xz --decompress --threads=8 | tar -xf - --uname \"\" --gname \"\" -C " << jailPath),
                        "unpack the system base into the jail directory");
 
-  // install packages in the jail, if needed
+  // install packages into the jail, if needed
   if (!spec.pkgInstall.empty() || !spec.pkgAdd.empty()) {
     LOG("installing packages ...")
     installAndAddPackagesInJail(jailPath, spec.pkgInstall, spec.pkgAdd);
