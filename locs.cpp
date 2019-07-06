@@ -1,6 +1,7 @@
 
 #include "locs.h"
 
+#include <string>
 
 namespace Locations {
 
