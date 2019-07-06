@@ -1,7 +1,6 @@
 
 #include "args.h"
 #include "spec.h"
-#include "file.h"
 #include "elf.h"
 #include "locs.h"
 #include "util.h"
@@ -33,6 +32,10 @@
 
 // used paths
 static const char *jailName = "_jail_create_";
+
+// uid/gid
+static uid_t myuid = ::getuid();
+static gid_t mygid = ::getgid();
 
 //
 // helpers
@@ -241,11 +244,9 @@ bool createCrate(const Args &args, const Spec &spec) {
 
   // pack the jail into a .crate file
   auto crateFileName = !args.createOutput.empty() ? args.createOutput : STR(guessCrateName(spec) << ".crate");
-  LOG("creating the crate file")
-  CrateFile::create(
-    jailPath,
-    crateFileName
-  );
+  LOG("creating the crate file " << crateFileName)
+  Util::runCommand(STR("tar cf - -C " << jailPath << " . | xz --extreme --threads=8 > " << crateFileName), "compress the jail directory into the crate file");
+  Util::Fs::chown(crateFileName, myuid, mygid);
 
   // remove the create directory
   LOG("removing the the jail directory")

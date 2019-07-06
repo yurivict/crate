@@ -1,7 +1,6 @@
 
 #include "args.h"
 #include "spec.h"
-#include "file.h"
 #include "locs.h"
 #include "util.h"
 #include "commands.h"
