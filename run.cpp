@@ -21,6 +21,8 @@ extern "C" { // https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=238928
 #include <string>
 #include <iostream>
 
+// 'sysctl security.jail.allow_raw_sockets=1' is needed to ping from jail
+
 #define ERR(msg...) ERR2("running a crate container", msg)
 
 #define LOG(msg...) \
@@ -30,8 +32,9 @@ extern "C" { // https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=238928
   }
 
 
-static uid_t myuid = getuid();
-static gid_t mygid = getgid();
+static uid_t myuid = ::getuid();
+static gid_t mygid = ::getgid();
+static const char* user = ::getenv("USER");
 
 // used paths
 static const char *jailName = "_jail_run_";
@@ -49,7 +52,6 @@ static std::string argsToString(int argc, char** argv) {
 //
 // interface
 //
-
 bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   LOG("'run' command is invoked, " << argc << " arguments are provided")
 
@@ -83,7 +85,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   };
   setJailEnv("CRATE", "yes"); // let the app know that it runs from the crate. CAVEAT if you remove this, the env(1) command below needs to be removed when there is no env
 
-  // satisfy options, if any
+  // turn options on
   if (spec.optionExists("x11")) {
     LOG("x11 option is requested: mount the X11 socket in jail")
     // create the X11 socket directory
@@ -96,29 +98,40 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
       ERR("DISPLAY environment variable is not set")
     setJailEnv("DISPLAY", display);
   }
+  std::string ipv4;
+  if (spec.optionExists("net")) {
+    ipv4 = "192.168.1.201";
+    // copy /etc/resolv.conf into jail
+    Util::runCommand(STR("cp /etc/resolv.conf " << J("/etc/resolv.conf")), "enable networking in /etc/rc.conf");
+    // enable the IP alias, which enables networking both inside and outside of jail
+    Util::runCommand(STR("ifconfig sk0 alias " << ipv4), "enable networking in /etc/rc.conf");
+  }
 
   // create jail
   LOG("creating jail " << jailXname)
-  res = jail_setv(JAIL_CREATE,
-    "host.hostname", jailXname.c_str(),
+  res = ::jail_setv(JAIL_CREATE,
     "path", jailPath.c_str(),
+    "host.hostname", jailXname.c_str(),
+    "ip4.addr", spec.optionExists("net") ? ipv4.c_str() : nullptr,
     "persist", NULL,
-    //"allow.raw_sockets", "true",
-    //"allow.socket_af", "true",
-    //"allow.mount", "true",
+    "allow.raw_sockets", spec.optionExists("net") ? "true" : "false",
+    "allow.socket_af", spec.optionExists("net") ? "true" : "false",
     NULL);
   if (res == -1)
-    ERR("failed to create jail: " << strerror(errno))
+    ERR("failed to create jail: " << jail_errmsg)
   int jid = res;
   LOG("jail " << jailXname << " has been created, jid=" << jid)
 
+  // helper
   auto runCommandInJail = [jid](auto cmd, auto descr) {
     Util::runCommand(STR("jexec " << jid << " " << cmd), descr);
   };
 
+  // rc-initializion (is this really needed?) This depends on the executables /bin/kenv, /sbin/sysctl, /bin/date which need to be kept during the 'create' phase
+  //runCommandInJail("/bin/sh /etc/rc", "exec.start");
+
   // add the same user to jail, make group=user for now
   {
-    auto user = ::getenv("USER");
     auto homeDir = STR("/home/" << user);
     LOG("create user's home directory " << homeDir << ", uid=" << myuid << " gid=" << mygid)
     Util::Fs::mkdir(J("/home"), 0755);
@@ -139,8 +152,10 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   int returnCode = 0;
   if (!spec.runExecutable.empty()) {
     LOG("running the command in jail: env=" << jailEnv)
-    returnCode = ::system(STR("jexec -U " << ::getenv("USER") << " " << jid << " /usr/bin/env \"" << jailEnv << "\" " << spec.runExecutable << argsToString(argc, argv)).c_str());
-    // XXX 256 gets returned, what does this mean???
+    returnCode = ::system(CSTR("jexec -l -U " << user << " " << jid
+                               << " /usr/bin/env \"" << jailEnv << "\""
+                               << " " << spec.runExecutable << argsToString(argc, argv)));
+    // XXX 256 gets returned, what does this mean?
     LOG("command has finished in jail: returnCode=" << returnCode)
   }
 
@@ -149,16 +164,23 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
     for (auto &service : spec.runServices)
       runCommandInJail(STR("/usr/sbin/service " << service << " onestop"), "stop the service in jail");
 
+  // rc-uninitializion (is this really needed?)
+  //runCommandInJail("/bin/sh /etc/rc.shutdown", "exec.stop");
+
+  // turn options off
   if (spec.optionExists("x11")) {
     Util::runCommand(STR("umount " << J("/tmp/.X11-unix")), "unmount nullfs for X11 socket in the jail directory");
+  }
+  if (spec.optionExists("net")) {
+    Util::runCommand(STR("ifconfig sk0 -alias " << ipv4), "enable networking in /etc/rc.conf");
   }
 
   // unmount devfs
   Util::runCommand(STR("umount " << jailPath << "/dev"), "unmount devfs in the jail directory");
 
-  // stop and remove the jail
+  // stop and remove jail
   LOG("removing jail " << jailXname << " jid=" << jid << " ...")
-  res = jail_remove(jid);
+  res = ::jail_remove(jid);
   if (res == -1)
     ERR("failed to remove jail: " << strerror(errno))
   LOG("removing jail " << jailXname << " jid=" << jid << " done")
@@ -168,6 +190,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   Util::Fs::rmdirHier(jailPath);
   LOG("removing the jail directory " << jailPath << " done")
 
+  // done
   outReturnCode = returnCode;
   LOG("'run' command has succeeded")
   return true;

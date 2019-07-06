@@ -21,6 +21,7 @@
     ss << msg; \
     return ss.str(); \
   }())
+#define CSTR(msg...) (STR(msg).c_str())
 
 #define ERR2(loc, msg...) \
   { \
