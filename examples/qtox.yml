@@ -9,4 +9,5 @@ run:
     executable: /usr/local/bin/qtox
 
 options:
+    - net
     - x11
