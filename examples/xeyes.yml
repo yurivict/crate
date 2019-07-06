@@ -1,9 +1,5 @@
 ---
 
-base:
-    keep:
-        - /bin/ls
-
 pkg:
     install:
         - xeyes

@@ -1,5 +1,7 @@
 ---
 
+# kodi is broken when run from the crate, it doesn't show texts. See the upstream bug https://github.com/xbmc/xbmc/issues/16350
+
 base:
     keep:
         - /bin/date
@@ -21,3 +23,5 @@ run:
 
 options:
     - x11
+    - net
+    - ssl-certs
