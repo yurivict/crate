@@ -221,7 +221,9 @@ bool createCrate(const Args &args, const Spec &spec) {
 
   // unpack the base archive
   LOG("unpacking the base archive")
-  Util::runCommand(STR("cat " << Locations::baseArchive << " | xz --decompress --threads=8 | tar -xf - --uname \"\" --gname \"\" -C " << jailPath), "unpack the system base into the jail directory");
+  Util::runCommand(STR("cat " << Locations::baseArchive
+                       << " | xz --decompress --threads=8 | tar -xf - --uname \"\" --gname \"\" -C " << jailPath),
+                       "unpack the system base into the jail directory");
 
   // install packages in the jail, if needed
   if (!spec.pkgInstall.empty() || !spec.pkgAdd.empty()) {
