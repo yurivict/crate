@@ -93,8 +93,8 @@ static std::set<std::string> getElfDependencies(const std::string &elfPath, cons
                                                 std::function<bool(const std::string&)> filter = [](const std::string &path) {return true;})
 {
   std::set<std::string> dset;
-  // It is possible to use elf(3) to read shared library dependences fron the elf file,
-  // but it's hard to then find the disk location, ld-elf.so does this through the woodoo magic.
+  // It is possible to use elf(3) to read shared library dependences from the elf file,
+  // but it's hard to then find the disk location, ld-elf.so does this through some WooDoo magic.
   // Instead, we just use ldd(1) to read this information.
   std::istringstream is(Util::runCommandGetOutput(
     STR("/usr/sbin/chroot " << jailPath << " /bin/sh -c \"ldd " << elfPath << " | grep '=>' | sed -e 's|.* => ||; s| .*||'\""), "get elf dependencies"));
