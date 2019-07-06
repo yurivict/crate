@@ -80,7 +80,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   std::string jailEnv;
   auto setJailEnv = [&jailEnv](auto var, auto val) {
     if (!jailEnv.empty())
-      jailEnv = jailEnv + ':';
+      jailEnv = jailEnv + ' ';
     jailEnv = jailEnv + var + '=' + val;
   };
   setJailEnv("CRATE", "yes"); // let the app know that it runs from the crate. CAVEAT if you remove this, the env(1) command below needs to be removed when there is no env
@@ -153,7 +153,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   if (!spec.runExecutable.empty()) {
     LOG("running the command in jail: env=" << jailEnv)
     returnCode = ::system(CSTR("jexec -l -U " << user << " " << jid
-                               << " /usr/bin/env \"" << jailEnv << "\""
+                               << " /usr/bin/env " << jailEnv
                                << " " << spec.runExecutable << argsToString(argc, argv)));
     // XXX 256 gets returned, what does this mean?
     LOG("command has finished in jail: returnCode=" << returnCode)
