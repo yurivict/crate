@@ -104,6 +104,11 @@ namespace Fs {
 
 namespace fs = std::filesystem;
 
+bool fileExists(const std::string &path) {
+  struct stat sb;
+  return ::stat(path.c_str(), &sb) == 0 && sb.st_mode & S_IFREG;
+}
+
 void chown(const std::string &path, uid_t owner, gid_t group) {
   SYSCALL(::chown(path.c_str(), owner, group), "chown", path.c_str());
 }

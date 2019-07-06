@@ -32,7 +32,6 @@
 #define SYSCALL(res, syscall, arg) Util::ckSyscallError(res, syscall, arg)
 
 // used paths
-static const char *baseArchive = "/home/yuri/jails-learning/base.txz"; // ftp://ftp1.freebsd.org/pub/FreeBSD/snapshots/arm64/12.0-STABLE/base.txz
 static const char *jailName = "_jail_create_";
 
 //
@@ -207,6 +206,13 @@ bool createCrate(const Args &args, const Spec &spec) {
 
   LOG("'create' command is invoked")
 
+  // download the base archive if not yet
+  if (!Util::Fs::fileExists(Locations::baseArchive)) {
+    std::cout << "downloading base.txz from " << Locations::baseArchiveUrl << " ..." << std::endl;
+    Util::runCommand(STR("fetch -o " << Locations::baseArchive << " " << Locations::baseArchiveUrl), "download base.txz");
+    std::cout << "base.txz has finished downloading" << std::endl;
+  }
+
   // create a jail directory
   auto jailPath = STR(Locations::jailDirectoryPath << "/" << jailName);
   res = mkdir(jailPath.c_str(), S_IRUSR|S_IWUSR|S_IXUSR);
@@ -215,7 +221,7 @@ bool createCrate(const Args &args, const Spec &spec) {
 
   // unpack the base archive
   LOG("unpacking the base archive")
-  Util::runCommand(STR("cat " << baseArchive << " | xz --decompress --threads=8 | tar -xf - --uname \"\" --gname \"\" -C " << jailPath), "unpack the system base into the jail directory");
+  Util::runCommand(STR("cat " << Locations::baseArchive << " | xz --decompress --threads=8 | tar -xf - --uname \"\" --gname \"\" -C " << jailPath), "unpack the system base into the jail directory");
 
   // install packages in the jail, if needed
   if (!spec.pkgInstall.empty() || !spec.pkgAdd.empty()) {

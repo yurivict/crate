@@ -67,6 +67,7 @@ std::string filePathToFileName(const std::string &path);
 
 namespace Fs {
 
+bool fileExists(const std::string &path);
 void chown(const std::string &path, uid_t owner, gid_t group);
 void unlink(const std::string &file);
 void mkdir(const std::string &dir, mode_t mode);
