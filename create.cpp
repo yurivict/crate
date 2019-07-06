@@ -62,13 +62,14 @@ static void runChrootCommand(const std::string &jailPath, const std::string &cmd
   Util::runCommand(STR("ASSUME_ALWAYS_YES=yes /usr/sbin/chroot " << jailPath << " " << cmd), descr);
 }
 
-static void installAndAddPackagesInJail(const std::string &jailPath, const std::vector<std::string> &pkgsInstall, const std::vector<std::string> &pkgsAdd) {
+static void installAndAddPackagesInJail(const std::string &jailPath,
+                                        const std::vector<std::string> &pkgsInstall,
+                                        const std::vector<std::string> &pkgsAdd,
+                                        const std::vector<std::pair<std::string, std::string>> &pkgLocalOverride) {
   // local helpers
   auto J = [&jailPath](auto subdir) {
     return STR(jailPath << subdir);
   };
-  // mount devfs
-  Util::runCommand(STR("mount -t devfs / " << J("/dev")), "mount devfs in the jail directory");
   // notify
   notifyUserOfLongProcess(true, "pkg", STR("install the required packages: " << (pkgsInstall+pkgsAdd)));
   // install
@@ -80,6 +81,17 @@ static void installAndAddPackagesInJail(const std::string &jailPath, const std::
       runChrootCommand(jailPath, STR("pkg add /tmp/" << Util::filePathToFileName(p)), "remove the added package files from jail");
     }
   }
+
+  // override packages with locally avaukable packages
+  for (auto lo : pkgLocalOverride) {
+    if (!Util::Fs::fileExists(lo.second))
+      ERR("package override: failed to find the package file '" << lo.second << "'")
+    runChrootCommand(jailPath, STR("pkg delete " << lo.first), CSTR("remove the package '" << lo.first << "' for local override in jail"));
+    Util::runCommand(STR("cp " << lo.second << " " << J("/tmp/")), CSTR("copy the local override package file '" << lo.second << "' into jail"));
+    runChrootCommand(jailPath, STR("pkg add /tmp/" << Util::filePathToFileName(lo.second)), CSTR("add the local override package '" << lo.second << "' in jail"));
+    Util::Fs::unlink(J(STR("/tmp/" << Util::filePathToFileName(lo.second))));
+  }
+
   // write the +CRATE.PKGS file
   runChrootCommand(jailPath, STR("pkg info > " << J("/+CRATE.PKGS")), "write +CRATE.PKGS file");
   // cleanup: delete the pkg package: it will not be needed any more, and delete the added package files
@@ -88,8 +100,6 @@ static void installAndAddPackagesInJail(const std::string &jailPath, const std::
     Util::runCommand(STR("rm " << jailPath << "/tmp/*"), "remove the added package files from jail");
   // notify
   notifyUserOfLongProcess(false, "pkg", STR("install the required packages: " << (pkgsInstall+pkgsAdd)));
-  // unmount devfs
-  Util::runCommand(STR("umount " << J("/dev")), "unmount devfs in the jail directory");
 }
 
 static std::set<std::string> getElfDependencies(const std::string &elfPath, const std::string &jailPath,
@@ -228,16 +238,23 @@ bool createCrate(const Args &args, const Spec &spec) {
                        << " | xz --decompress --threads=8 | tar -xf - --uname \"\" --gname \"\" -C " << jailPath),
                        "unpack the system base into the jail directory");
 
+  // mount devfs
+  LOG("mounting devfs in jail")
+  Util::runCommand(STR("mount -t devfs / " << jailPath << "/dev"), "mount devfs in the jail directory");
+
   // install packages into the jail, if needed
   if (!spec.pkgInstall.empty() || !spec.pkgAdd.empty()) {
     LOG("installing packages ...")
-    installAndAddPackagesInJail(jailPath, spec.pkgInstall, spec.pkgAdd);
+    installAndAddPackagesInJail(jailPath, spec.pkgInstall, spec.pkgAdd, spec.pkgLocalOverride);
     LOG("done installing packages")
   }
 
   // remove parts that aren't needed
   LOG("removing unnecessary parts")
   removeRedundantJailParts(jailPath, spec);
+
+  // unmount devfs
+  Util::runCommand(STR("umount " << jailPath << "/dev"), "unmount devfs in the jail directory");
 
   // write the +CRATE-SPEC file
   Util::runCommand(STR("cp " << args.createSpec << " " << jailPath << "/+CRATE.SPEC"), "copy the spec file into jail");

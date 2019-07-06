@@ -9,6 +9,7 @@
 
 #include <string>
 #include <set>
+#include <map>
 #include <iostream>
 
 #define ERR(msg...) \
@@ -64,6 +65,11 @@ Spec parseSpec(const std::string &fname) {
       for (auto b : k.second) {
         if (isKey(b, "install")) {
           listOrScalar(b.second, spec.pkgInstall, "pkg/install");
+        } else if (isKey(b, "local-override")) {
+          if (!b.second.IsMap())
+            ERR("pkg/local-override must be a map of package name to local package file path")
+          for (auto lo : b.second)
+            spec.pkgLocalOverride.push_back({lo.first.template as<std::string>(), lo.second.template as<std::string>()});
         } else if (isKey(b, "add")) {
           listOrScalar(b.second, spec.pkgAdd, "pkg/add");
           std::cerr << "pkg/add tag is currently broken" << std::endl;
@@ -127,16 +133,33 @@ Spec Spec::preprocess() const {
 }
 
 void Spec::validate() const {
+  // helpers
   auto isFullPath = [](const std::string &path) {
     return path[0] == '/';
   };
+
+  // should be no conflicting package local overrides
+  if (!pkgLocalOverride.empty()) {
+    std::map<std::string, std::string> pkgs;
+    for (auto &lo : pkgLocalOverride) {
+      if (pkgs.find(lo.first) != pkgs.end())
+        ERR("duplicate local override packages: " << lo.first << "->" << pkgs[lo.first] << " and " << lo.first << "->" << lo.second)
+      pkgs[lo.first] = lo.second;
+    }
+  }
+
+  // executable must have full path
   if (!runExecutable.empty()) {
     if (!isFullPath(runExecutable))
       ERR("the executable path has to be a full path, executable=" << runExecutable)
   }
+
+  // shared directories must be full paths
   for (auto &dirShare : dirsShare)
     if (!isFullPath(dirShare.first) || !isFullPath(dirShare.second))
       ERR("the shared directory paths have to be a full paths, share=" << dirShare.first << "->" << dirShare.second)
+
+  // options must be from the supported set
   for (auto &o : options)
     if (allOptions.find(o) == allOptions.end())
       ERR("the unknown option '" << o << "' is supplied")
