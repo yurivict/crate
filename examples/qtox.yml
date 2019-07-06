@@ -1,5 +1,7 @@
 ---
 
+# qTox fails in crate (jail): https://github.com/qTox/qTox/issues/5740
+
 pkg:
     install:
         - qTox
