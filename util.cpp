@@ -15,6 +15,8 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/sysctl.h>
 
 
 #define SYSCALL(res, syscall, arg) Util::ckSyscallError(res, syscall, arg)
@@ -98,6 +100,15 @@ std::string filePathToBareName(const std::string &path) {
 std::string filePathToFileName(const std::string &path) {
   auto i = path.rfind(sepFilePath);
   return i != std::string::npos ? path.substr(i + 1) : path;
+}
+
+int getSysctlInt(const char *name) {
+  int value;
+  size_t size = sizeof(value);
+
+  SYSCALL(::sysctlbyname(name, &value, &size, NULL, 0), "sysctlbyname", name);
+
+  return value;
 }
 
 namespace Fs {
