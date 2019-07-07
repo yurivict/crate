@@ -150,7 +150,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
     LOG("add group " << user << " in jail")
     runCommandInJail(STR("/usr/sbin/pw groupadd " << user << " -g " << mygid), "add the group in jail");
     LOG("add user " << user << " in jail")
-    runCommandInJail(STR("/usr/sbin/pw useradd " << user << " -u " << myuid << " -g " << mygid << " -s /bin/sh -d " << homeDir << " " << user), "add the user in jail");
+    runCommandInJail(STR("/usr/sbin/pw useradd " << user << " -u " << myuid << " -g " << mygid << " -s /bin/sh -d " << homeDir), "add the user in jail");
     // "video" option requires the corresponding user/group: create the identical user/group to jail
     if (spec.optionExists("video")) {
       static const char *devName = "/dev/video";
@@ -172,7 +172,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
         }
       }
 
-      // add group and our user to this group
+      // add video users and group, and add our user to this group
       if (videoUid != -1) {
         // CAVEAT we assume that videoUid/videoGid aren't the same UID/GID that the user has
         runCommandInJail(STR("/usr/sbin/pw groupadd videoops -g " << videoGid), "add the videoops group");
