@@ -237,7 +237,7 @@ bool createCrate(const Args &args, const Spec &spec) {
   // unpack the base archive
   LOG("unpacking the base archive")
   Util::runCommand(STR("cat " << Locations::baseArchive
-                       << " | xz --decompress --threads=8 | tar -xf - --uname \"\" --gname \"\" -C " << jailPath),
+                       << " | xz --decompress --threads=" << Util::getSysctlInt("hw.ncpu") << " | tar -xf - --uname \"\" --gname \"\" -C " << jailPath),
                        "unpack the system base into the jail directory");
 
   // mount devfs
