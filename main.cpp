@@ -22,6 +22,14 @@ int main(int argc, char** argv) {
   }
 
   //
+  // Can't run in jail because we need to create jails ourselves
+  //
+  if (::Util::getSysctlInt("security.jail.jailed") != 0) {
+    std::cerr << rang::fg::red << "crate can not run in jail" << rang::style::reset << std::endl;
+    return 1;
+  }
+
+  //
   // adjust uid, make it equal to euid
   //
   Util::ckSyscallError(::setuid(::geteuid()), "setuid", "geteuid()");
