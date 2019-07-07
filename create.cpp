@@ -30,9 +30,6 @@
 
 #define SYSCALL(res, syscall, arg) Util::ckSyscallError(res, syscall, arg)
 
-// used paths
-static const char *jailName = "_jail_create_";
-
 // uid/gid
 static uid_t myuid = ::getuid();
 static gid_t mygid = ::getgid();
@@ -221,6 +218,9 @@ bool createCrate(const Args &args, const Spec &spec) {
 
   LOG("'create' command is invoked")
 
+  // output crate file name
+  auto crateFileName = !args.createOutput.empty() ? args.createOutput : STR(guessCrateName(spec) << ".crate");
+
   // download the base archive if not yet
   if (!Util::Fs::fileExists(Locations::baseArchive)) {
     std::cout << "downloading base.txz from " << Locations::baseArchiveUrl << " ..." << std::endl;
@@ -229,7 +229,7 @@ bool createCrate(const Args &args, const Spec &spec) {
   }
 
   // create the jail directory
-  auto jailPath = STR(Locations::jailDirectoryPath << "/" << jailName);
+  auto jailPath = STR(Locations::jailDirectoryPath << "/chroot-create-" << Util::filePathToBareName(crateFileName) << "-pid" << ::getpid());
   res = mkdir(jailPath.c_str(), S_IRUSR|S_IWUSR|S_IXUSR);
   if (res == -1)
     ERR("failed to create the jail directory '" << jailPath << "': " << strerror(errno))
@@ -262,7 +262,6 @@ bool createCrate(const Args &args, const Spec &spec) {
   Util::runCommand(STR("cp " << args.createSpec << " " << jailPath << "/+CRATE.SPEC"), "copy the spec file into jail");
 
   // pack the jail into a .crate file
-  auto crateFileName = !args.createOutput.empty() ? args.createOutput : STR(guessCrateName(spec) << ".crate");
   LOG("creating the crate file " << crateFileName)
   Util::runCommand(STR("tar cf - -C " << jailPath << " . | xz --extreme --threads=8 > " << crateFileName), "compress the jail directory into the crate file");
   Util::Fs::chown(crateFileName, myuid, mygid);

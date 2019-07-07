@@ -37,9 +37,6 @@ static uid_t myuid = ::getuid();
 static gid_t mygid = ::getgid();
 static const char* user = ::getenv("USER");
 
-// used paths
-static const char *jailName = "_jail_run_";
-
 //
 // helpers
 //
@@ -61,7 +58,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   auto homeDir = STR("/home/" << user);
 
   // create the jail directory
-  auto jailPath = STR(Locations::jailDirectoryPath << "/" << jailName);
+  auto jailPath = STR(Locations::jailDirectoryPath << "/jail-" << Util::filePathToBareName(args.runCrateFile) << "-pid" << ::getpid());
   Util::Fs::mkdir(jailPath, S_IRUSR|S_IWUSR|S_IXUSR);
   auto J = [&jailPath](auto subdir) {
     return STR(jailPath << subdir);
