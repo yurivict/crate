@@ -8,7 +8,7 @@ pkg:
         - qTox
         - dbus
     local-override:
-        qTox: /usr/ports/net-im/qTox/work/pkg/qTox-1.16.3.529_1.txz
+        qTox: /usr/ports/net-im/qTox/work/pkg/qTox-1.16.3.529_2.txz
 
 run:
     executable: /usr/local/bin/qtox
@@ -16,3 +16,4 @@ run:
 options:
     - net
     - x11
+    - video
