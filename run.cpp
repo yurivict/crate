@@ -16,9 +16,11 @@ extern "C" { // https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=238928
 }
 #include <sys/uio.h>
 #include <jail.h>
+#include <ctype.h>
 
 #include <string>
 #include <iostream>
+#include <filesystem>
 
 // 'sysctl security.jail.allow_raw_sockets=1' is needed to ping from jail
 
@@ -149,6 +151,37 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
     runCommandInJail(STR("/usr/sbin/pw groupadd " << user << " -g " << mygid), "add the group in jail");
     LOG("add user " << user << " in jail")
     runCommandInJail(STR("/usr/sbin/pw useradd " << user << " -u " << myuid << " -g " << mygid << " -s /bin/sh -d " << homeDir << " " << user), "add the user in jail");
+    // "video" option requires the corresponding user/group: create the identical user/group to jail
+    if (spec.optionExists("video")) {
+      static const char *devName = "/dev/video";
+      static unsigned devNameLen = ::strlen(devName);
+      int videoUid = -1;
+      int videoGid = -1;
+      for (const auto &entry : std::filesystem::directory_iterator("/dev")) {
+        auto cpath = entry.path().native();
+        if (cpath.size() >= devNameLen+1 && cpath.substr(0, devNameLen) == devName && ::isdigit(cpath[devNameLen])) {
+          struct stat sb;
+          if (::stat(cpath.c_str(), &sb) != 0)
+            ERR("can't stat the video device '" << cpath << "'");
+          if (videoUid == -1) {
+            videoUid = sb.st_uid;
+            videoGid = sb.st_gid;
+          } else if (sb.st_uid != videoUid || sb.st_gid != videoGid) {
+            WARN("video devices have different uid/gid combinations")
+          }
+        }
+      }
+
+      // add group and our user to this group
+      if (videoUid != -1) {
+        // CAVEAT we assume that videoUid/videoGid aren't the same UID/GID that the user has
+        runCommandInJail(STR("/usr/sbin/pw groupadd videoops -g " << videoGid), "add the videoops group");
+        runCommandInJail(STR("/usr/sbin/pw groupmod videoops -m " << user), "add the main user to the videoops group");
+        runCommandInJail(STR("/usr/sbin/pw useradd video -u " << videoUid << " -g " << videoGid), "add the video user in jail");
+      } else {
+        WARN("the app expects video, but no video devices are found")
+      }
+    }
   }
 
   // share directories if requested

@@ -18,7 +18,7 @@
     exit(1); \
   }
 
-static std::set<std::string> allOptions = {"x11", "net", "ssl-certs", "dbg-ktrace"};
+static std::set<std::string> allOptions = {"x11", "net", "ssl-certs", "video", "dbg-ktrace"};
 
 Spec parseSpec(const std::string &fname) {
 
