@@ -70,8 +70,10 @@ static void installAndAddPackagesInJail(const std::string &jailPath,
   auto J = [&jailPath](auto subdir) {
     return STR(jailPath << subdir);
   };
+
   // notify
   notifyUserOfLongProcess(true, "pkg", STR("install the required packages: " << (pkgsInstall+pkgsAdd)));
+
   // install
   if (!pkgsInstall.empty())
     runChrootCommand(jailPath, STR("pkg install " << pkgsInstall), "install the requested packages into the jail");
@@ -269,6 +271,7 @@ bool createCrate(const Args &args, const Spec &spec) {
   LOG("removing the the jail directory")
   Util::Fs::rmdirHier(jailPath);
 
+  // finished
   std::cout << "the crate file '" << crateFileName << "' has been created" << std::endl;
   LOG("'create' command has succeeded")
   return true;
