@@ -18,7 +18,7 @@
     exit(1); \
   }
 
-static std::set<std::string> allOptions = {"x11", "net", "ssl-certs", "video", "dbg-ktrace"};
+static std::set<std::string> allOptions = {"x11", "net", "ssl-certs", "video", "gl", "dbg-ktrace"};
 
 Spec parseSpec(const std::string &fname) {
 
@@ -136,6 +136,12 @@ Spec Spec::preprocess() const {
   // ssl-certs option => install the ca_root_nss package
   if (O("ssl-certs", false))
     spec.pkgInstall.push_back("ca_root_nss");
+
+  // gl option => install nvidia-driver & mesa-dri (XXX for now it only works on nvidia-card-based systems)
+  if (O("gl", false)) {
+    spec.pkgInstall.push_back("mesa-dri");
+    spec.pkgInstall.push_back("nvidia-driver");
+  }
 
   // dbg-ktrace option => keep the ktrace executable
   if (O("dbg-ktrace", true))
