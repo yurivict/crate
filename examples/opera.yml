@@ -1,0 +1,21 @@
+---
+
+# many YouTube videos fail: Your browser does not currently recognize any of the video formats available.
+# some https sites fail: ex. https://cdn.soft8soft.com/demo/applications/farmers_journey/index.html
+
+base:
+    keep:
+        - /usr/bin/uname
+
+pkg:
+    install:
+        - opera
+        - xorg-fonts
+
+run:
+    executable: /usr/local/bin/opera
+
+options:
+    - net
+    - x11
+    - video

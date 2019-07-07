@@ -1,0 +1,15 @@
+---
+
+# all https sites fail
+
+pkg:
+    install:
+        - midori
+
+run:
+    executable: /usr/local/bin/midori
+
+options:
+    - net
+    - x11
+    - video

@@ -1,0 +1,14 @@
+---
+
+pkg:
+    install:
+        - chromium
+
+run:
+    executable: /usr/local/bin/chrome
+
+options:
+    - net
+    - x11
+    - gl
+    - video

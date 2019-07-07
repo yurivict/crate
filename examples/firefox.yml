@@ -1,0 +1,14 @@
+---
+
+pkg:
+    install:
+        - firefox
+
+run:
+    executable: /usr/local/bin/firefox
+
+options:
+    - net
+    - x11
+    - gl
+    - video
