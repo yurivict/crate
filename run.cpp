@@ -2,6 +2,7 @@
 #include "args.h"
 #include "spec.h"
 #include "locs.h"
+#include "mount.h"
 #include "util.h"
 #include "commands.h"
 
@@ -19,8 +20,10 @@ extern "C" { // https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=238928
 #include <ctype.h>
 
 #include <string>
+#include <list>
 #include <iostream>
 #include <filesystem>
+#include <memory>
 
 // 'sysctl security.jail.allow_raw_sockets=1' is needed to ping from jail
 
@@ -64,10 +67,14 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
     return STR(jailPath << subdir);
   };
 
-  // helpers
-  auto mountNullfs = [J](auto hostDir, auto jailDir, auto what) {
-    Util::runCommand(STR("mount -t nullfs " << hostDir << " " << J(jailDir)), CSTR("mount nullfs for " << what << " in the jail directory"));
+  // mounts
+  std::list<std::unique_ptr<Mount>> mounts;
+  auto mount = [&mounts](Mount *m) {
+    mounts.push_front(std::unique_ptr<Mount>(m)); // push_front so that the last added is also last removed
+    m->mount();
   };
+
+  // helpers
   auto unmountFsInJail = [J](auto jailDir, auto what) {
     Util::runCommand(STR("umount " << J(jailDir)), CSTR("unmount " << what << " in the jail directory"));
   };
@@ -99,7 +106,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
     // create the X11 socket directory
     Util::Fs::mkdir(J("/tmp/.X11-unix"), 0777);
     // mount the X11 socket directory in jail
-    mountNullfs("/tmp/.X11-unix", "/tmp/.X11-unix", "X11 socket");
+    mount(new Mount("nullfs", J("/tmp/.X11-unix"), "/tmp/.X11-unix"));
     // DISPLAY variable copied to jail
     auto *display = ::getenv("DISPLAY");
     if (display == nullptr)
@@ -108,7 +115,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   }
   std::string ipv4;
   if (spec.optionExists("net")) {
-    ipv4 = "192.168.1.201";
+    ipv4 = "192.168.5.203";
     // copy /etc/resolv.conf into jail
     Util::runCommand(STR("cp /etc/resolv.conf " << J("/etc/resolv.conf")), "enable networking in /etc/rc.conf");
     // enable the IP alias, which enables networking both inside and outside of jail
@@ -189,7 +196,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
     // create the directory in jail
     Util::runCommand(STR("mkdir -p " << J(dirShare.second)), "create the shared directory in jail"); // TODO replace with API-based calls
     // mount it as nullfs
-    mountNullfs(dirShare.first, dirShare.second, STR("shared directory '" << dirShare.second << "'"));
+    mount(new Mount("nullfs", J(dirShare.second), dirShare.first));
   }
 
   // start services, if any
@@ -197,6 +204,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
     for (auto &service : spec.runServices)
       runCommandInJail(STR("/usr/sbin/service " << service << " onestart"), "start the service in jail");
 
+  // copy X11 authentication files into the juser's home directory in jail
   if (spec.optionExists("x11")) {
     // copy the .Xauthority file
     if (Util::Fs::fileExists(STR(homeDir << "/.Xauthority"))) {
@@ -230,19 +238,10 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   if (spec.optionExists("dbg-ktrace"))
     Util::runCommand(STR("cp " << J(homeDir) << "/ktrace.out ."), "copy the ktrace.out out of jail");
 
-  // unshare directories if requested
-  for (auto &dirShare : spec.dirsShare) {
-    // unmount its nullfs mount
-    unmountFsInJail(dirShare.second, STR("shared directory '" << dirShare.second << "'"));
-  }
-
   // rc-uninitializion (is this really needed?)
   //runCommandInJail("/bin/sh /etc/rc.shutdown", "exec.stop");
 
   // turn options off
-  if (spec.optionExists("x11")) {
-    unmountFsInJail("/tmp/.X11-unix", "X11 socket");
-  }
   if (spec.optionExists("net")) {
     Util::runCommand(STR("ifconfig sk0 -alias " << ipv4), "enable networking in /etc/rc.conf");
   }
@@ -256,6 +255,10 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   if (res == -1)
     ERR("failed to remove jail: " << strerror(errno))
   LOG("removing jail " << jailXname << " jid=" << jid << " done")
+
+  // unmount all
+  for (auto &m : mounts)
+    m->unmount();
 
   // remove the jail directory
   LOG("removing the jail directory " << jailPath << " ...")
