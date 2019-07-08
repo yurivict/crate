@@ -44,11 +44,12 @@ void Mount::mount() {
   errmsg[0] = '\0';
   param("fstype", (void*)fstype,         (size_t)-1);
   param("fspath", (void*)fspath.c_str(), (size_t)-1);
-  param("target", (void*)target.c_str(), (size_t)-1);
+  if (!target.empty())
+    param("target", (void*)target.c_str(), (size_t)-1);
   param("errmsg", errmsg,                sizeof(errmsg));
   int res = ::nmount(&iov[0], iov.size(), 0/*flags*/);
   if (res != 0)
-    ERR("nmount of '" << target << "' on '" << fspath << "' failed: " << strerror(errno))
+    ERR("nmount of '" << target << "' on '" << fspath << "' failed: " << strerror(errno) << (errmsg[0] ? STR(" (" << errmsg << ")") : ""))
   mounted = true;
 
   for (int i = 0; i < iov.size(); i += 2)
