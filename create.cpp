@@ -259,6 +259,12 @@ bool createCrate(const Args &args, const Spec &spec) {
   Mount mountDevfs("devfs", STR(jailPath << "/dev"), "");
   mountDevfs.mount();
 
+  // mount the pkg cache
+  LOG("mounting pkg cache and as nullfs in jail")
+  Util::Fs::mkdir(STR(jailPath << "/var/cache/pkg"), 0755);
+  Mount mountPkgCache("nullfs", STR(jailPath << "/var/cache/pkg"), "/var/cache/pkg");
+  mountPkgCache.mount();
+
   // install packages into the jail, if needed
   if (!spec.pkgInstall.empty() || !spec.pkgAdd.empty()) {
     LOG("installing packages ...")
@@ -266,13 +272,15 @@ bool createCrate(const Args &args, const Spec &spec) {
     LOG("done installing packages")
   }
 
+  // unmount
+  LOG("unmounting devfs in jail")
+  mountDevfs.unmount();
+  LOG("unmounting pkg cache in jail")
+  mountPkgCache.unmount();
+
   // remove parts that aren't needed
   LOG("removing unnecessary parts")
   removeRedundantJailParts(jailPath, spec);
-
-  // unmount devfs
-  LOG("unmounting devfs in jail")
-  mountDevfs.unmount();
 
   // write the +CRATE-SPEC file
   Util::Fs::copyFile(args.createSpec, STR(jailPath << "/+CRATE.SPEC"));
