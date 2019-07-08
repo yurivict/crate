@@ -204,7 +204,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
     for (auto &service : spec.runServices)
       runCommandInJail(STR("/usr/sbin/service " << service << " onestart"), "start the service in jail");
 
-  // copy X11 authentication files into the juser's home directory in jail
+  // copy X11 authentication files into the user's home directory in jail
   if (spec.optionExists("x11")) {
     // copy the .Xauthority file
     if (Util::Fs::fileExists(STR(homeDir << "/.Xauthority"))) {
