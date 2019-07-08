@@ -65,6 +65,7 @@ std::string tmSecMs();
 std::string filePathToBareName(const std::string &path);
 std::string filePathToFileName(const std::string &path);
 int getSysctlInt(const char *name);
+std::string gethostname();
 
 namespace Fs {
 

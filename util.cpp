@@ -111,6 +111,12 @@ int getSysctlInt(const char *name) {
   return value;
 }
 
+std::string gethostname() {
+  char name[256];
+  SYSCALL(::gethostname(name, sizeof(name)), "gethostname", "");
+  return name;
+}
+
 namespace Fs {
 
 namespace fs = std::filesystem;
