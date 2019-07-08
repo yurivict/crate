@@ -294,6 +294,14 @@ bool hasExtension(const char *file, const char *extension) {
   return ext != nullptr && ::strcmp(ext, extension) == 0;
 }
 
+void copyFile(const std::string &srcFile, const std::string &dstFile) {
+  try {
+    fs::copy_file(srcFile, dstFile);
+  } catch (fs::filesystem_error& e) {
+    ERR2("copy file", "could not copy file file1.txt: " << e.what())
+  }
+}
+
 }
 
 }

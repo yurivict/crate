@@ -112,7 +112,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   if (spec.optionExists("net")) {
     ipv4 = "192.168.5.203";
     // copy /etc/resolv.conf into jail
-    Util::runCommand(STR("cp /etc/resolv.conf " << J("/etc/resolv.conf")), "enable networking in /etc/rc.conf");
+    Util::Fs::copyFile("/etc/resolv.conf", J("/etc/resolv.conf"));
     // enable the IP alias, which enables networking both inside and outside of jail
     Util::runCommand(STR("ifconfig sk0 alias " << ipv4), "enable networking in /etc/rc.conf");
   }
@@ -201,16 +201,12 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
 
   // copy X11 authentication files into the user's home directory in jail
   if (spec.optionExists("x11")) {
-    // copy the .Xauthority file
-    if (Util::Fs::fileExists(STR(homeDir << "/.Xauthority"))) {
-      Util::runCommand(STR("cp " << homeDir << "/.Xauthority " << J(homeDir) << "/"), "copy the .Xauthority file");
-      Util::Fs::chown(STR(J(homeDir) << "/.Xauthority"), myuid, mygid);
-    }
-    // copy the .Xauthority file
-    if (Util::Fs::fileExists(STR(homeDir << "/.ICEauthority"))) {
-      Util::runCommand(STR("cp " << homeDir << "/.ICEauthority " << J(homeDir) << "/"), "copy the .ICEauthority file");
-      Util::Fs::chown(STR(J(homeDir) << "/.ICEauthority"), myuid, mygid);
-    }
+    // copy the .Xauthority and .ICEauthority files if they are present
+    for (auto &file : {STR(homeDir << "/.Xauthority"), STR(homeDir << "/.ICEauthority")})
+      if (Util::Fs::fileExists(file)) {
+        Util::Fs::copyFile(file, J(file));
+        Util::Fs::chown(J(file), myuid, mygid);
+      }
   }
 
   // run the process
@@ -231,7 +227,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
       runCommandInJail(STR("/usr/sbin/service " << service << " onestop"), "stop the service in jail");
 
   if (spec.optionExists("dbg-ktrace"))
-    Util::runCommand(STR("cp " << J(homeDir) << "/ktrace.out ."), "copy the ktrace.out out of jail");
+    Util::Fs::copyFile(J(STR(homeDir << "/ktrace.out")), "ktrace.out");
 
   // rc-uninitializion (is this really needed?)
   //runCommandInJail("/bin/sh /etc/rc.shutdown", "exec.stop");

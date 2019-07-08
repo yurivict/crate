@@ -78,7 +78,7 @@ static void installAndAddPackagesInJail(const std::string &jailPath,
     runChrootCommand(jailPath, STR("pkg install " << pkgsInstall), "install the requested packages into the jail");
   if (!pkgsAdd.empty()) {
     for (auto &p : pkgsAdd) {
-      Util::runCommand(STR("cp " << p << " " << J("/tmp/")), "copy the package to add into the jail");
+      Util::Fs::copyFile(p, STR(J("/tmp/") << Util::filePathToFileName(p)));
       runChrootCommand(jailPath, STR("pkg add /tmp/" << Util::filePathToFileName(p)), "remove the added package files from jail");
     }
   }
@@ -88,7 +88,7 @@ static void installAndAddPackagesInJail(const std::string &jailPath,
     if (!Util::Fs::fileExists(lo.second))
       ERR("package override: failed to find the package file '" << lo.second << "'")
     runChrootCommand(jailPath, STR("pkg delete " << lo.first), CSTR("remove the package '" << lo.first << "' for local override in jail"));
-    Util::runCommand(STR("cp " << lo.second << " " << J("/tmp/")), CSTR("copy the local override package file '" << lo.second << "' into jail"));
+    Util::Fs::copyFile(lo.second, STR(J("/tmp/") << Util::filePathToFileName(lo.second)));
     runChrootCommand(jailPath, STR("pkg add /tmp/" << Util::filePathToFileName(lo.second)), CSTR("add the local override package '" << lo.second << "' in jail"));
     Util::Fs::unlink(J(STR("/tmp/" << Util::filePathToFileName(lo.second))));
   }
@@ -267,7 +267,7 @@ bool createCrate(const Args &args, const Spec &spec) {
   mountDevfs.unmount();
 
   // write the +CRATE-SPEC file
-  Util::runCommand(STR("cp " << args.createSpec << " " << jailPath << "/+CRATE.SPEC"), "copy the spec file into jail");
+  Util::Fs::copyFile(args.createSpec, STR(jailPath << "/+CRATE.SPEC"));
 
   // pack the jail into a .crate file
   LOG("creating the crate file " << crateFileName)

@@ -83,6 +83,7 @@ bool isXzArchive(const char *file);
 char isElfFileOrDir(const std::string &file); // returns 'E'LF, 'D'ir, or 'N'o
 std::set<std::string> findElfFiles(const std::string &dir);
 bool hasExtension(const char *file, const char *extension);
+void copyFile(const std::string &srcFile, const std::string &dstFile);
 
 }
 
