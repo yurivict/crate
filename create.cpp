@@ -62,7 +62,8 @@ static void runChrootCommand(const std::string &jailPath, const std::string &cmd
 static void installAndAddPackagesInJail(const std::string &jailPath,
                                         const std::vector<std::string> &pkgsInstall,
                                         const std::vector<std::string> &pkgsAdd,
-                                        const std::vector<std::pair<std::string, std::string>> &pkgLocalOverride) {
+                                        const std::vector<std::pair<std::string, std::string>> &pkgLocalOverride,
+                                        const std::vector<std::string> &pkgNuke) {
   // local helpers
   auto J = [&jailPath](auto subdir) {
     return STR(jailPath << subdir);
@@ -90,6 +91,10 @@ static void installAndAddPackagesInJail(const std::string &jailPath,
     runChrootCommand(jailPath, STR("pkg add /tmp/" << Util::filePathToFileName(lo.second)), CSTR("add the local override package '" << lo.second << "' in jail"));
     Util::Fs::unlink(J(STR("/tmp/" << Util::filePathToFileName(lo.second))));
   }
+
+  // nuke packages when requested
+  for (auto &n : pkgNuke)
+    runChrootCommand(jailPath, STR("/usr/local/sbin/pkg-static delete -y -f " << n), "nuke the package in the jail");
 
   // write the +CRATE.PKGS file
   runChrootCommand(jailPath, STR("pkg info > " << J("/+CRATE.PKGS")), "write +CRATE.PKGS file");
@@ -247,7 +252,7 @@ bool createCrate(const Args &args, const Spec &spec) {
   // install packages into the jail, if needed
   if (!spec.pkgInstall.empty() || !spec.pkgAdd.empty()) {
     LOG("installing packages ...")
-    installAndAddPackagesInJail(jailPath, spec.pkgInstall, spec.pkgAdd, spec.pkgLocalOverride);
+    installAndAddPackagesInJail(jailPath, spec.pkgInstall, spec.pkgAdd, spec.pkgLocalOverride, spec.pkgNuke);
     LOG("done installing packages")
   }
 

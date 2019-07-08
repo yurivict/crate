@@ -74,6 +74,8 @@ Spec parseSpec(const std::string &fname) {
           listOrScalar(b.second, spec.pkgAdd, "pkg/add");
           std::cerr << "pkg/add tag is currently broken" << std::endl;
           abort();
+        } else if (isKey(b, "nuke")) {
+          listOrScalar(b.second, spec.pkgNuke, "pkg/nuke");
         } else {
           ERR("unknown element pkg/" << b.first << " in spec")
         }

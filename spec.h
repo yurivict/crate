@@ -8,8 +8,9 @@ public:
   std::vector<std::string>                           baseRemove;
 
   std::vector<std::string>                           pkgInstall;              // 0..oo packages to install
-  std::vector<std::string>                           pkgAdd;                  // 0..oo packages to add
   std::vector<std::pair<std::string, std::string>>   pkgLocalOverride;        // 0..oo packages to override
+  std::vector<std::string>                           pkgAdd;                  // 0..oo packages to add
+  std::vector<std::string>                           pkgNuke;                 // 0..oo packages to nuke, i.e. delete without regard of them being nominally used
 
   std::string                                        runExecutable;           // 0..1 executables can be run
   std::vector<std::string>                           runServices;             // 0..oo services can be run
