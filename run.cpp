@@ -74,11 +74,6 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
     m->mount();
   };
 
-  // helpers
-  auto unmountFsInJail = [J](auto jailDir, auto what) {
-    Util::runCommand(STR("umount " << J(jailDir)), CSTR("unmount " << what << " in the jail directory"));
-  };
-
   // extract the crate archive into the jail directory
   LOG("extracting the crate file " << args.runCrateFile << " into " << jailPath)
   Util::runCommand(STR("tar xf " << args.runCrateFile << " -C " << jailPath), "extract the crate file into the jail directory");
@@ -87,7 +82,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   auto spec = parseSpec(J("/+CRATE.SPEC")).preprocess();
 
   // mount devfs
-  Util::runCommand(STR("mount -t devfs / " << J("/dev")), "mount devfs in the jail directory");
+  mount(new Mount("devfs", J("/dev"), ""));
 
   auto jailXname = STR(Util::filePathToBareName(args.runCrateFile) << "_pid" << ::getpid());
 
@@ -245,9 +240,6 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   if (spec.optionExists("net")) {
     Util::runCommand(STR("ifconfig sk0 -alias " << ipv4), "enable networking in /etc/rc.conf");
   }
-
-  // unmount devfs
-  unmountFsInJail("/dev", "/dev as devfs");
 
   // stop and remove jail
   LOG("removing jail " << jailXname << " jid=" << jid << " ...")

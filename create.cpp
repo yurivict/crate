@@ -3,6 +3,7 @@
 #include "spec.h"
 #include "elf.h"
 #include "locs.h"
+#include "mount.h"
 #include "util.h"
 #include "commands.h"
 
@@ -247,7 +248,8 @@ bool createCrate(const Args &args, const Spec &spec) {
 
   // mount devfs
   LOG("mounting devfs in jail")
-  Util::runCommand(STR("mount -t devfs / " << jailPath << "/dev"), "mount devfs in the jail directory");
+  Mount mountDevfs("devfs", STR(jailPath << "/dev"), "");
+  mountDevfs.mount();
 
   // install packages into the jail, if needed
   if (!spec.pkgInstall.empty() || !spec.pkgAdd.empty()) {
@@ -261,7 +263,8 @@ bool createCrate(const Args &args, const Spec &spec) {
   removeRedundantJailParts(jailPath, spec);
 
   // unmount devfs
-  Util::runCommand(STR("umount " << jailPath << "/dev"), "unmount devfs in the jail directory");
+  LOG("unmounting devfs in jail")
+  mountDevfs.unmount();
 
   // write the +CRATE-SPEC file
   Util::runCommand(STR("cp " << args.createSpec << " " << jailPath << "/+CRATE.SPEC"), "copy the spec file into jail");
