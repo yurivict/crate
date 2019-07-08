@@ -183,7 +183,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
         runCommandInJail(STR("/usr/sbin/pw groupmod videoops -m " << user), "add the main user to the videoops group");
         runCommandInJail(STR("/usr/sbin/pw useradd video -u " << videoUid << " -g " << videoGid), "add the video user in jail");
       } else {
-        WARN("the app expects video, but no video devices are found")
+        WARN("the app expects video, but no video devices are present")
       }
     }
   }
