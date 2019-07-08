@@ -16,7 +16,9 @@ crate: $(OBJS)
 install: crate
 	install -s -m 04755 crate $(DESTDIR)$(PREFIX)/bin
 
-install-local: crate
+install-local: crate.x
+
+crate.x: crate
 	sudo install -s -m 04755 -o 0 -g 0 crate crate.x
 
 clean:
