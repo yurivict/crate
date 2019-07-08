@@ -119,7 +119,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   LOG("creating jail " << jailXname)
   res = ::jail_setv(JAIL_CREATE,
     "path", jailPath.c_str(),
-    "host.hostname", jailXname.c_str(),
+    "host.hostname", Util::gethostname().c_str(),
     "ip4.addr", spec.optionExists("net") ? ipv4.c_str() : nullptr,
     "persist", nullptr,
     "allow.raw_sockets", spec.optionExists("net") ? "true" : "false",
@@ -196,6 +196,19 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   if (!spec.runServices.empty())
     for (auto &service : spec.runServices)
       runCommandInJail(STR("/usr/sbin/service " << service << " onestart"), "start the service in jail");
+
+  if (spec.optionExists("x11")) {
+    // copy the .Xauthority file
+    if (Util::Fs::fileExists(STR(homeDir << "/.Xauthority"))) {
+      Util::runCommand(STR("cp " << homeDir << "/.Xauthority " << J(homeDir) << "/"), "copy the .Xauthority file");
+      Util::Fs::chown(STR(J(homeDir) << "/.Xauthority"), myuid, mygid);
+    }
+    // copy the .Xauthority file
+    if (Util::Fs::fileExists(STR(homeDir << "/.ICEauthority"))) {
+      Util::runCommand(STR("cp " << homeDir << "/.ICEauthority " << J(homeDir) << "/"), "copy the .ICEauthority file");
+      Util::Fs::chown(STR(J(homeDir) << "/.ICEauthority"), myuid, mygid);
+    }
+  }
 
   // run the process
   int returnCode = 0;
