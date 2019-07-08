@@ -1,5 +1,9 @@
 ---
 
+base:
+    keep:
+        - /sbin/sysctl
+
 pkg:
     install:
         - chromium
