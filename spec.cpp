@@ -158,6 +158,10 @@ void Spec::validate() const {
     return path[0] == '/';
   };
 
+  // should be something to run
+  if (runExecutable.empty() && runServices.empty())
+    ERR("crate has to have either the executable to run, some services to run, or both, it can't have nothing to do")
+
   // should be no conflicting package local overrides
   if (!pkgLocalOverride.empty()) {
     std::map<std::string, std::string> pkgs;
