@@ -164,12 +164,20 @@ static void removeRedundantJailParts(const std::string &jailPath, const Spec &sp
   for (auto &file : spec.baseKeep)
     keepFile(file);
   if (!spec.runServices.empty()) {
-    keepFile("/usr/sbin/service");
-    keepFile("/bin/kenv");
-    keepFile("/bin/mkdir");
-    keepFile("/usr/bin/grep");
-    keepFile("/sbin/sysctl");
-    keepFile("/usr/bin/limits");
+    keepFile("/usr/sbin/service");  // needed to run a service
+    keepFile("/bin/cat");           // based on ktrace of 'service {name} start'
+    keepFile("/bin/chmod");         // --"--
+    keepFile("/usr/bin/env");       // --"--
+    keepFile("/bin/kenv");          // --"--
+    keepFile("/bin/mkdir");         // --"--
+    keepFile("/usr/bin/touch");     // --"--
+    keepFile("/usr/bin/procstat");  // --"--
+    keepFile("/usr/bin/grep");      // ?? needed?
+    keepFile("/sbin/sysctl");       // ??
+    keepFile("/usr/bin/limits");    // ??
+    keepFile("/usr/sbin/daemon");   // services are often run with daemon(8)
+    if (spec.runExecutable.empty())
+      keepFile("/bin/sleep");       // our idle script runs
   }
   keepFile("/bin/sh"); // allow to create a user in jail, the user has to have the default shell
   keepFile("/usr/bin/env"); // allow to pass environment to jail

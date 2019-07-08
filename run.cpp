@@ -132,9 +132,12 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   int jid = res;
   LOG("jail " << jailXname << " has been created, jid=" << jid)
 
-  // helper
+  // helpers
   auto runCommandInJail = [jid](auto cmd, auto descr) {
     Util::runCommand(STR("jexec " << jid << " " << cmd), descr);
+  };
+  auto writeFileInJail = [J](auto str, auto file) {
+    Util::Fs::writeFile(str, J(file));
   };
 
   // rc-initializion (is this really needed?) This depends on the executables /bin/kenv, /sbin/sysctl, /bin/date which need to be kept during the 'create' phase
@@ -219,6 +222,33 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
                                << " " << spec.runExecutable << argsToString(argc, argv)));
     // XXX 256 gets returned, what does this mean?
     LOG("command has finished in jail: returnCode=" << returnCode)
+  } else {
+    // No command is specified to be run.
+    // This means that this is a service-only crate. We have to run some command, otherwise the crate would just exit immediately.
+    LOG("this is a service-only crate, install and run the command tha exits on Ctrl-C")
+    auto cmdFile = "/run.sh";
+    writeFileInJail(STR(
+        "#!/bin/sh"                                                 << std::endl <<
+        ""                                                          << std::endl <<
+        "trap onSIGNIT 2"                                           << std::endl <<
+        ""                                                          << std::endl <<
+        "onSIGNIT()"                                                << std::endl <<
+        "{"                                                         << std::endl <<
+        "  echo \"Caught signal SIGINT ... exiting\""               << std::endl <<
+        "  exit 0"                                                  << std::endl <<
+        "}"                                                         << std::endl <<
+        ""                                                          << std::endl <<
+        "echo \"Running the services: " << spec.runServices << "\"" << std::endl <<
+        "echo \"Waiting for Ctrl-C to exit ...\""                   << std::endl <<
+        "/bin/sleep 1000000000"                                     << std::endl
+      ),
+      cmdFile
+    );
+    // set ownershop/permissions
+    Util::Fs::chown(J(cmdFile), myuid, mygid);
+    Util::Fs::chmod(J(cmdFile), 0500); // User-RX
+    // run it the same way as we would any other command
+    returnCode = ::system(CSTR("jexec -l -U " << user << " " << jid << " " << cmdFile));
   }
 
   // stop services, if any

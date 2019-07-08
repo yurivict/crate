@@ -71,6 +71,8 @@ namespace Fs {
 
 bool fileExists(const std::string &path);
 bool dirExists(const std::string &path);
+void writeFile(const std::string &data, const std::string &file);
+void chmod(const std::string &path, mode_t mode);
 void chown(const std::string &path, uid_t owner, gid_t group);
 void unlink(const std::string &file);
 void mkdir(const std::string &dir, mode_t mode);

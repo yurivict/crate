@@ -131,6 +131,26 @@ bool dirExists(const std::string &path) {
   return ::stat(path.c_str(), &sb) == 0 && sb.st_mode & S_IFDIR;
 }
 
+void writeFile(const std::string &data, const std::string &file) {
+  int fd;
+  SYSCALL(fd = ::open(file.c_str(), O_WRONLY|O_CREAT), "open", file.c_str());
+
+  auto res = ::write(fd, data.c_str(), data.size());
+  if (res == -1) {
+    auto err = STR("failed to write file '" << file << "': " << strerror(errno));
+    (void)::close(fd);
+    ERR2("write file", err)
+  } else if (res != data.size()) {
+    (void)::close(fd);
+    ERR2("write file", "short write in file '" << file << "', attempted to write " << data.size() << " bytes, actually wrote only " << res << " bytes")
+  }
+  SYSCALL(::close(fd), "close", file.c_str());
+}
+
+void chmod(const std::string &path, mode_t mode) {
+  SYSCALL(::chmod(path.c_str(), mode), "chmod", path.c_str());
+}
+
 void chown(const std::string &path, uid_t owner, gid_t group) {
   SYSCALL(::chown(path.c_str(), owner, group), "chown", path.c_str());
 }
