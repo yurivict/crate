@@ -35,15 +35,21 @@ Spec parseSpec(const std::string &fname) {
       ERR("unsupported " << name << " object type " << node.Type())
     }
   };
-  auto listOrScalar = [](auto &node, std::vector<std::string> &out, const char *name) {
+  auto listOrScalar = [](auto &node, std::vector<std::string> &out, const char *opath) {
     if (node.IsSequence()) {
       for (auto r : node)
         out.push_back(r.template as<std::string>());
+      return true;
     } else if (node.IsScalar()) {
       out.push_back(node.template as<std::string>());
+      return true;
     } else {
-      ERR("unsupported " << name << " object type " << node.Type())
+      return false;
     }
+  };
+  auto listOrScalarOnly = [listOrScalar](auto &node, std::vector<std::string> &out, const char *opath) {
+    if (!listOrScalar(node, out, opath))
+      ERR("unsupported " << opath << " object type " << node.Type())
   };
 
   // parse the spec in the yaml format
@@ -54,9 +60,9 @@ Spec parseSpec(const std::string &fname) {
     if (isKey(k, "base")) {
       for (auto b : k.second) {
         if (isKey(b, "keep")) {
-          listOrScalar(b.second, spec.baseKeep, "base/keep");
+          listOrScalarOnly(b.second, spec.baseKeep, "base/keep");
         } else if (isKey(b, "remove")) {
-          listOrScalar(b.second, spec.baseRemove, "base/remove");
+          listOrScalarOnly(b.second, spec.baseRemove, "base/remove");
         } else {
           ERR("unknown element base/" << b.first << " in spec")
         }
@@ -64,18 +70,18 @@ Spec parseSpec(const std::string &fname) {
     } else if (isKey(k, "pkg")) {
       for (auto b : k.second) {
         if (isKey(b, "install")) {
-          listOrScalar(b.second, spec.pkgInstall, "pkg/install");
+          listOrScalarOnly(b.second, spec.pkgInstall, "pkg/install");
         } else if (isKey(b, "local-override")) {
           if (!b.second.IsMap())
             ERR("pkg/local-override must be a map of package name to local package file path")
           for (auto lo : b.second)
             spec.pkgLocalOverride.push_back({lo.first.template as<std::string>(), lo.second.template as<std::string>()});
         } else if (isKey(b, "add")) {
-          listOrScalar(b.second, spec.pkgAdd, "pkg/add");
+          listOrScalarOnly(b.second, spec.pkgAdd, "pkg/add");
           std::cerr << "pkg/add tag is currently broken" << std::endl;
           abort();
         } else if (isKey(b, "nuke")) {
-          listOrScalar(b.second, spec.pkgNuke, "pkg/nuke");
+          listOrScalarOnly(b.second, spec.pkgNuke, "pkg/nuke");
         } else {
           ERR("unknown element pkg/" << b.first << " in spec")
         }
@@ -85,7 +91,7 @@ Spec parseSpec(const std::string &fname) {
         if (isKey(b, "executable")) {
           scalar(b.second, spec.runExecutable, "run/executable");
         } else if (isKey(b, "service")) {
-          listOrScalar(b.second, spec.runServices, "run/service");
+          listOrScalarOnly(b.second, spec.runServices, "run/service");
         } else {
           ERR("unknown element run/" << b.first << " in spec")
         }
