@@ -19,6 +19,7 @@
     exit(1); \
   }
 
+// all options
 static std::set<std::string> allOptions = {"x11", "net", "ssl-certs", "video", "gl", "dbg-ktrace"};
 
 // some generic programming magic
@@ -28,6 +29,10 @@ static void Add(std::vector<std::string> &container, const std::string &val) {
 static void Add(std::set<std::string> &container, const std::string &val) {
   container.insert(val);
 }
+
+//
+// interface
+//
 
 Spec parseSpec(const std::string &fname) {
 
