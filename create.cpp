@@ -28,8 +28,6 @@
       std::cerr << rang::fg::gray << Util::tmSecMs() << ": " << msg << rang::style::reset << std::endl; \
   }
 
-#define SYSCALL(res, syscall, arg) Util::ckSyscallError(res, syscall, arg)
-
 // uid/gid
 static uid_t myuid = ::getuid();
 static gid_t mygid = ::getgid();
