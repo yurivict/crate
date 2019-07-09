@@ -2,13 +2,13 @@
 
 #include <string>
 
-enum Cmd {CmdNone, CmdCreate, CmdRun};
+enum Command {CmdNone, CmdCreate, CmdRun};
 
 class Args {
 public:
   Args() : logProgress (false) { }
 
-  Cmd cmd;
+  Command cmd;
 
   // general params
   bool logProgress; // log progress

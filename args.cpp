@@ -88,7 +88,7 @@ static const char* isLong(const char* arg) {
   return nullptr;
 }
 
-static Cmd isCommand(const char* arg) {
+static Command isCommand(const char* arg) {
   if (strEq(arg, "create"))
     return CmdCreate;
   if (strEq(arg, "run"))
