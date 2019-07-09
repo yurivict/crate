@@ -117,6 +117,22 @@ std::string gethostname() {
   return name;
 }
 
+std::vector<std::string> splitString(const std::string &str, const std::string &delimiter) {
+  std::vector<std::string> res;
+  std::string s = str;
+
+  size_t pos = 0;
+  while ((pos = s.find(delimiter)) != std::string::npos) {
+    if (pos > 0)
+      res.push_back(s.substr(0, pos));
+    s.erase(0, pos + delimiter.length());
+  }
+  if (!s.empty())
+    res.push_back(s);
+
+  return res;
+}
+
 namespace Fs {
 
 namespace fs = std::filesystem;

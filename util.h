@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include <set>
 #include <iostream>
 #include <sstream>
@@ -17,6 +18,12 @@
 
 #define STR(msg...) \
   ([=]() { \
+    std::ostringstream ss; \
+    ss << msg; \
+    return ss.str(); \
+  }())
+#define STRg(msg...) \
+  ([]() { \
     std::ostringstream ss; \
     ss << msg; \
     return ss.str(); \
@@ -66,6 +73,7 @@ std::string filePathToBareName(const std::string &path);
 std::string filePathToFileName(const std::string &path);
 int getSysctlInt(const char *name);
 std::string gethostname();
+std::vector<std::string> splitString(const std::string &str, const std::string &delimiter);
 
 namespace Fs {
 
