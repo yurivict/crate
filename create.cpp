@@ -1,7 +1,6 @@
 
 #include "args.h"
 #include "spec.h"
-#include "elf.h"
 #include "locs.h"
 #include "mount.h"
 #include "util.h"
