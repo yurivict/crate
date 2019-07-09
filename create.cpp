@@ -283,6 +283,7 @@ bool createCrate(const Args &args, const Spec &spec) {
   removeRedundantJailParts(jailPath, spec);
 
   // write the +CRATE-SPEC file
+  LOG("write the +CRATE.SPEC file")
   Util::Fs::copyFile(args.createSpec, STR(jailPath << "/+CRATE.SPEC"));
 
   // pack the jail into a .crate file
