@@ -22,6 +22,11 @@
 // all options
 static std::set<std::string> allOptions = {"x11", "net", "ssl-certs", "video", "gl", "dbg-ktrace"};
 
+// helpers
+static std::string AsString(const YAML::Node &node) {
+  return node.template as<std::string>();
+}
+
 // some generic programming magic
 static void Add(std::vector<std::string> &container, const std::string &val) {
   container.push_back(val);
@@ -40,11 +45,11 @@ Spec parseSpec(const std::string &fname) {
 
   // helper functions
   auto isKey = [](auto &k, const char *s) {
-    return k.first.template as<std::string>() == s;
+    return AsString(k.first) == s;
   };
   auto scalar = [](auto &node, std::string &out, const char *name) {
     if (node.IsScalar()) {
-      out = node.template as<std::string>();
+      out = AsString(node);
     } else {
       ERR("unsupported " << name << " object type " << node.Type())
     }
@@ -52,10 +57,10 @@ Spec parseSpec(const std::string &fname) {
   auto listOrScalar = [](auto &node, auto &out, const char *opath) {
     if (node.IsSequence()) {
       for (auto r : node)
-        Add(out, r.template as<std::string>());
+        Add(out, AsString(r));
       return true;
     } else if (node.IsScalar()) {
-      for (auto &e : Util::splitString(node.template as<std::string>(), " "))
+      for (auto &e : Util::splitString(AsString(node), " "))
         Add(out, e);
       return true;
     } else {
@@ -90,7 +95,7 @@ Spec parseSpec(const std::string &fname) {
           if (!b.second.IsMap())
             ERR("pkg/local-override must be a map of package name to local package file path")
           for (auto lo : b.second)
-            spec.pkgLocalOverride.push_back({lo.first.template as<std::string>(), lo.second.template as<std::string>()});
+            spec.pkgLocalOverride.push_back({AsString(lo.first), AsString(lo.second)});
         } else if (isKey(b, "add")) {
           listOrScalarOnly(b.second, spec.pkgAdd, "pkg/add");
           std::cerr << "pkg/add tag is currently broken" << std::endl;
@@ -117,9 +122,9 @@ Spec parseSpec(const std::string &fname) {
           if (b.second.IsSequence()) {
             for (auto oneShare : b.second) {
               if (oneShare.IsScalar())
-                spec.dirsShare.push_back({oneShare.template as<std::string>(), oneShare.template as<std::string>()});
+                spec.dirsShare.push_back({AsString(oneShare), AsString(oneShare)});
               else if (oneShare.IsSequence() && oneShare.size() == 2) {
-                spec.dirsShare.push_back({oneShare[0].template as<std::string>(), oneShare[1].template as<std::string>()});
+                spec.dirsShare.push_back({AsString(oneShare[0]), AsString(oneShare[1])});
               } else {
                 ERR("elements of the dirs/share list have to be scalars or lists of size two (fromDir, toDir)")
               }
