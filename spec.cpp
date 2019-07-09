@@ -1,5 +1,6 @@
 
 #include "spec.h"
+#include "util.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,6 +21,14 @@
 
 static std::set<std::string> allOptions = {"x11", "net", "ssl-certs", "video", "gl", "dbg-ktrace"};
 
+// some generic programming magic
+static void Add(std::vector<std::string> &container, const std::string &val) {
+  container.push_back(val);
+}
+static void Add(std::set<std::string> &container, const std::string &val) {
+  container.insert(val);
+}
+
 Spec parseSpec(const std::string &fname) {
 
   Spec spec;
@@ -35,19 +44,20 @@ Spec parseSpec(const std::string &fname) {
       ERR("unsupported " << name << " object type " << node.Type())
     }
   };
-  auto listOrScalar = [](auto &node, std::vector<std::string> &out, const char *opath) {
+  auto listOrScalar = [](auto &node, auto &out, const char *opath) {
     if (node.IsSequence()) {
       for (auto r : node)
-        out.push_back(r.template as<std::string>());
+        Add(out, r.template as<std::string>());
       return true;
     } else if (node.IsScalar()) {
-      out.push_back(node.template as<std::string>());
+      for (auto &e : Util::splitString(node.template as<std::string>(), " "))
+        Add(out, e);
       return true;
     } else {
       return false;
     }
   };
-  auto listOrScalarOnly = [listOrScalar](auto &node, std::vector<std::string> &out, const char *opath) {
+  auto listOrScalarOnly = [listOrScalar](auto &node, auto &out, const char *opath) {
     if (!listOrScalar(node, out, opath))
       ERR("unsupported " << opath << " object type " << node.Type())
   };
@@ -117,8 +127,8 @@ Spec parseSpec(const std::string &fname) {
         }
       }
     } else if (isKey(k, "options")) {
-      for (auto o : k.second)
-        spec.options.insert(o.template as<std::string>());
+      if (!listOrScalar(k.second, spec.options, "pkg/options"))
+        ERR("pkg/options are not scalar or list")
     } else {
       ERR("unknown top-level element '" << k.first << "' in spec")
     }
