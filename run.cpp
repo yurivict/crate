@@ -2,6 +2,7 @@
 #include "args.h"
 #include "spec.h"
 #include "locs.h"
+#include "cmd.h"
 #include "mount.h"
 #include "util.h"
 #include "commands.h"
@@ -76,7 +77,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
 
   // extract the crate archive into the jail directory
   LOG("extracting the crate file " << args.runCrateFile << " into " << jailPath)
-  Util::runCommand(STR("tar xf " << args.runCrateFile << " -C " << jailPath), "extract the crate file into the jail directory");
+  Util::runCommand(STR(Cmd::xz << " < " << args.runCrateFile << " | tar xf - -C " << jailPath), "extract the crate file into the jail directory");
 
   // parse +CRATE.SPEC
   auto spec = parseSpec(J("/+CRATE.SPEC")).preprocess();

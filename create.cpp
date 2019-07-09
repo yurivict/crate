@@ -2,6 +2,7 @@
 #include "args.h"
 #include "spec.h"
 #include "locs.h"
+#include "cmd.h"
 #include "mount.h"
 #include "util.h"
 #include "commands.h"
@@ -248,8 +249,8 @@ bool createCrate(const Args &args, const Spec &spec) {
   // unpack the base archive
   LOG("unpacking the base archive")
   Util::runCommand(STR("cat " << Locations::baseArchive
-                       << " | xz --decompress --threads=" << Util::getSysctlInt("hw.ncpu") << " | tar -xf - --uname \"\" --gname \"\" -C " << jailPath),
-                       "unpack the system base into the jail directory");
+                       << " | " << Cmd::xz << " --decompress | tar -xf - --uname \"\" --gname \"\" -C " << jailPath),
+                   "unpack the system base into the jail directory");
 
   // mount devfs
   LOG("mounting devfs in jail")
@@ -285,7 +286,7 @@ bool createCrate(const Args &args, const Spec &spec) {
 
   // pack the jail into a .crate file
   LOG("creating the crate file " << crateFileName)
-  Util::runCommand(STR("tar cf - -C " << jailPath << " . | xz --extreme --threads=8 > " << crateFileName), "compress the jail directory into the crate file");
+  Util::runCommand(STR("tar cf - -C " << jailPath << " . | " << Cmd::xz << " --extreme > " << crateFileName), "compress the jail directory into the crate file");
   Util::Fs::chown(crateFileName, myuid, mygid);
 
   // remove the create directory
