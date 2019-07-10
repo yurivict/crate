@@ -25,6 +25,7 @@ extern "C" { // https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=238928
 #include <iostream>
 #include <filesystem>
 #include <memory>
+#include <limits>
 
 // 'sysctl security.jail.allow_raw_sockets=1' is needed to ping from jail
 
@@ -158,15 +159,15 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
     if (spec.optionExists("video")) {
       static const char *devName = "/dev/video";
       static unsigned devNameLen = ::strlen(devName);
-      int videoUid = -1;
-      int videoGid = -1;
+      uid_t videoUid = std::numeric_limits<uid_t>::max();
+      gid_t videoGid = std::numeric_limits<gid_t>::max();
       for (const auto &entry : std::filesystem::directory_iterator("/dev")) {
         auto cpath = entry.path().native();
         if (cpath.size() >= devNameLen+1 && cpath.substr(0, devNameLen) == devName && ::isdigit(cpath[devNameLen])) {
           struct stat sb;
           if (::stat(cpath.c_str(), &sb) != 0)
             ERR("can't stat the video device '" << cpath << "'");
-          if (videoUid == -1) {
+          if (videoUid == std::numeric_limits<uid_t>::max()) {
             videoUid = sb.st_uid;
             videoGid = sb.st_gid;
           } else if (sb.st_uid != videoUid || sb.st_gid != videoGid) {
@@ -176,7 +177,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
       }
 
       // add video users and group, and add our user to this group
-      if (videoUid != -1) {
+      if (videoUid != std::numeric_limits<uid_t>::max()) {
         // CAVEAT we assume that videoUid/videoGid aren't the same UID/GID that the user has
         runCommandInJail(STR("/usr/sbin/pw groupadd videoops -g " << videoGid), "add the videoops group");
         runCommandInJail(STR("/usr/sbin/pw groupmod videoops -m " << user), "add the main user to the videoops group");

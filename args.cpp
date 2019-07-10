@@ -146,7 +146,7 @@ Args parseArguments(int argc, char** argv, unsigned &processed) {
 
   enum Loc {LocBeforeCmd, LocAfterCmd};
   Loc loc = LocBeforeCmd;
-  unsigned a;
+  int a;
   bool stop = false;
   for (a = 1; !stop && a < argc; a++) {
     switch (loc) {

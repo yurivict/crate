@@ -52,7 +52,7 @@ void Mount::mount() {
     ERR("nmount of '" << target << "' on '" << fspath << "' failed: " << strerror(errno) << (errmsg[0] ? STR(" (" << errmsg << ")") : ""))
   mounted = true;
 
-  for (int i = 0; i < iov.size(); i += 2)
+  for (unsigned i = 0; i < iov.size(); i += 2)
     ::free(iov[i].iov_base);
 }
 

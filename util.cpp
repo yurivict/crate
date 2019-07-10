@@ -156,7 +156,7 @@ void writeFile(const std::string &data, const std::string &file) {
     auto err = STR("failed to write file '" << file << "': " << strerror(errno));
     (void)::close(fd);
     ERR2("write file", err)
-  } else if (res != data.size()) {
+  } else if (res != (int)data.size()) {
     (void)::close(fd);
     ERR2("write file", "short write in file '" << file << "', attempted to write " << data.size() << " bytes, actually wrote only " << res << " bytes")
   }
