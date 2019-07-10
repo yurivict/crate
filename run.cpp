@@ -23,9 +23,16 @@ extern "C" { // https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=238928
 #include <string>
 #include <list>
 #include <iostream>
-#include <filesystem>
 #include <memory>
 #include <limits>
+#if __cplusplus >= 201703L && __has_include(<filesystem>)
+#  include <filesystem>
+#else
+#  include <experimental/filesystem>
+  namespace std {
+    namespace filesystem = experimental::filesystem;
+  }
+#endif
 
 // 'sysctl security.jail.allow_raw_sockets=1' is needed to ping from jail
 
