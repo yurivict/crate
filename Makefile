@@ -4,14 +4,15 @@ OBJS=   $(SRCS:.cpp=.o)
 
 PREFIX   ?=  /usr/local
 CXXFLAGS +=  `pkg-config --cflags yaml-cpp`
-LDFLAGS  +=  `pkg-config --libs yaml-cpp` -ljail
+LDFLAGS  +=  `pkg-config --libs yaml-cpp`
+LIBS     +=  -ljail
 
 CXXFLAGS+=  -Wall -std=c++17
 
 all: crate
 
 crate: $(OBJS)
-	$(CXX) $(LDFLAGS) -o $@ $(OBJS)
+	$(CXX) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
 
 install: crate
 	install -s -m 04755 crate $(DESTDIR)$(PREFIX)/bin
