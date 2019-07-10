@@ -252,6 +252,9 @@ bool createCrate(const Args &args, const Spec &spec) {
                        << " | " << Cmd::xz << " --decompress | tar -xf - --uname \"\" --gname \"\" -C " << jailPath),
                    "unpack the system base into the jail directory");
 
+  // copy /etc/resolv.conf into the jail directory such that pkg would be able to resolve addresses
+  Util::Fs::copyFile("/etc/resolv.conf", STR(jailPath << "/etc/resolv.conf"));
+
   // mount devfs
   LOG("mounting devfs in jail")
   Mount mountDevfs("devfs", STR(jailPath << "/dev"), "");
@@ -279,6 +282,9 @@ bool createCrate(const Args &args, const Spec &spec) {
   // remove parts that aren't needed
   LOG("removing unnecessary parts")
   removeRedundantJailParts(jailPath, spec);
+
+  // remove /etc/resolv.conf in the jail directory
+  Util::Fs::unlink(STR(jailPath << "/etc/resolv.conf"));
 
   // write the +CRATE-SPEC file
   LOG("write the +CRATE.SPEC file")
