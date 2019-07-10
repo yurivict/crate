@@ -64,6 +64,7 @@ int main(int argc, char** argv) {
   case CmdCreate: {
     auto spec = parseSpec(args.createSpec);
     spec.validate();
+    createCacheDirectoryIfNeeded();
     succ = createCrate(args, spec.preprocess());
     break;
   } case CmdRun: {

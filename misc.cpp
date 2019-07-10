@@ -5,13 +5,29 @@
 #include <sys/stat.h>
 #include <errno.h>
 
-void createJailsDirectoryIfNeeded() {
+//
+// internals
+//
+
+static void createDirectoryIfNeeded(const char *dir, const char *what) {
   int res;
 
   // first, just try to create it. It might already exist which is ok.
-  res = ::mkdir(Locations::jailDirectoryPath, 0700); // it should be only readable/writable by root
+  res = ::mkdir(dir, 0700); // it should be only readable/writable by root
   if (res == -1 && errno != EEXIST)
-    ERR2("create jails directory", "failed to create the jails directory '" << Locations::jailDirectoryPath << "': " << strerror(errno))
+    ERR2(STR("create " << what << " directory"), "failed to create the " << what << " directory '" << dir << "': " << strerror(errno))
 
   // TODO check that permissions are correct on Locations::jailDirectoryPath
+}
+
+//
+// interface
+//
+
+void createJailsDirectoryIfNeeded() {
+  createDirectoryIfNeeded(Locations::jailDirectoryPath, "jails");
+}
+
+void createCacheDirectoryIfNeeded() {
+  createDirectoryIfNeeded(Locations::cacheDirectoryPath, "cache");
 }
