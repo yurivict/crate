@@ -125,7 +125,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
     // copy /etc/resolv.conf into jail
     Util::Fs::copyFile("/etc/resolv.conf", J("/etc/resolv.conf"));
     // enable the IP alias, which enables networking both inside and outside of jail
-    Util::runCommand(STR("ifconfig " << netIface << " alias " << netIPv4), "enable networking in /etc/rc.conf");
+    Util::runCommand(STR("ifconfig " << netIface << " alias " << netIPv4 << " netmask 0xffffffff"), "enable networking in /etc/rc.conf");
   }
 
   // create jail
