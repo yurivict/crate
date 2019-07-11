@@ -49,6 +49,10 @@ static uid_t myuid = ::getuid();
 static gid_t mygid = ::getgid();
 static const char* user = ::getenv("USER");
 
+// network params
+static const char *netIface = "sk0";
+static const char *netIPv4 = "192.168.5.203";
+
 //
 // helpers
 //
@@ -117,13 +121,11 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
       ERR("DISPLAY environment variable is not set")
     setJailEnv("DISPLAY", display);
   }
-  std::string ipv4;
   if (spec.optionExists("net")) {
-    ipv4 = "192.168.5.203";
     // copy /etc/resolv.conf into jail
     Util::Fs::copyFile("/etc/resolv.conf", J("/etc/resolv.conf"));
     // enable the IP alias, which enables networking both inside and outside of jail
-    Util::runCommand(STR("ifconfig sk0 alias " << ipv4), "enable networking in /etc/rc.conf");
+    Util::runCommand(STR("ifconfig " << netIface << " alias " << netIPv4), "enable networking in /etc/rc.conf");
   }
 
   // create jail
@@ -131,7 +133,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   res = ::jail_setv(JAIL_CREATE,
     "path", jailPath.c_str(),
     "host.hostname", Util::gethostname().c_str(),
-    "ip4.addr", spec.optionExists("net") ? ipv4.c_str() : nullptr,
+    "ip4.addr", spec.optionExists("net") ? netIPv4 : nullptr,
     "persist", nullptr,
     "allow.raw_sockets", spec.optionExists("net") ? "true" : "false",
     "allow.socket_af", spec.optionExists("net") ? "true" : "false",
@@ -273,7 +275,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
 
   // turn options off
   if (spec.optionExists("net")) {
-    Util::runCommand(STR("ifconfig sk0 -alias " << ipv4), "enable networking in /etc/rc.conf");
+    Util::runCommand(STR("ifconfig " << netIface << " -alias " << netIPv4), "enable networking in /etc/rc.conf");
   }
 
   // stop and remove jail
