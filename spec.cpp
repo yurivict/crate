@@ -12,6 +12,7 @@
 #include <set>
 #include <map>
 #include <iostream>
+#include <sstream>
 
 #define ERR(msg...) \
   { \
@@ -19,8 +20,10 @@
     exit(1); \
   }
 
-// all options
+// various sets
 static std::set<std::string> allOptions = {"x11", "net", "ssl-certs", "video", "gl", "dbg-ktrace"};
+static std::set<std::string> allScriptSections = {"start-create", "end-create",
+                                                  "start-run", "pre-run", "post-run", "end-run"};
 
 // helpers
 static std::string AsString(const YAML::Node &node) {
@@ -33,6 +36,80 @@ static void Add(std::vector<std::string> &container, const std::string &val) {
 }
 static void Add(std::set<std::string> &container, const std::string &val) {
   container.insert(val);
+}
+
+static std::map<std::string, std::string> parseScriptsSection(const std::string &section, const YAML::Node &node) {
+  auto isSequenceOfScalars = [](const YAML::Node &node) {
+    if (!node.IsSequence() || node.size() == 0)
+      return false;
+    for (auto &s : node)
+      if (!s.IsScalar())
+        return false;
+
+    return true;
+  };
+  auto isSequenceOfSequenceOfScalars = [isSequenceOfScalars](const YAML::Node &node) {
+    if (!node.IsSequence() || node.size() == 0)
+      return false;
+    for (auto &n : node) {
+      if (!isSequenceOfScalars(n))
+        return false;
+      for (auto &ns : n)
+        if (!ns.IsScalar())
+          return false;
+    }
+
+    return true;
+  };
+  auto listOrScalar = [&section,isSequenceOfScalars](const YAML::Node &node, std::string &out) { // expect a scalar or the array of scalars
+    if (node.IsScalar()) {
+      out = STR(AsString(node) << std::endl);
+      return true;
+    } else if (isSequenceOfScalars(node)) {
+      std::ostringstream ss;
+      for (auto line : node) {
+        if (!line.IsScalar())
+          ERR("scalar expected as a script line in '" << section << "': line.Type=" << line.Type())
+        ss << AsString(line) << std::endl;
+      }
+      out = ss.str();
+      return true;
+    } else {
+      return false;
+    }
+  };
+
+  // Supported layouts:
+  // * Scalar
+  // * array of scalars => 1 multi-line
+  // * array of array of scalar
+  // * map of {scalar, array of scalar}
+
+  static const char *errMsg = "scripts should be scalars, arrays of scalars, arrays of arrays of scalars, or maps of scalars or of arrays of scalars";
+
+  std::string str;
+  if (listOrScalar(node, str)) { // a single single-line script OR a single multi-line script
+    return {{"", str}};
+  } else if (isSequenceOfSequenceOfScalars(node)) { // array of array of scalar
+    std::map<std::string, std::string> m;
+    unsigned idx = 1;
+    for (auto elt : node)
+      if (listOrScalar(elt, str))
+        m[STR("script#" << idx++)] = str;
+      else
+        ERR(errMsg << " '" << section << "' #1")
+    return m;
+  } else if (node.IsMap()) { // map of {scalar, array of scalar}
+    std::map<std::string, std::string> m;
+    for (auto namedScript : node)
+      if (listOrScalar(namedScript.second, str))
+        m[AsString(namedScript.first)] = str;
+      else
+        ERR(errMsg << ", problematic section '" << section << "' #2")
+    return m;
+  } else {
+    ERR(errMsg << " '" << section << "' #3")
+  }
 }
 
 //
@@ -138,7 +215,16 @@ Spec parseSpec(const std::string &fname) {
       }
     } else if (isKey(k, "options")) {
       if (!listOrScalar(k.second, spec.options, "pkg/options"))
-        ERR("pkg/options are not scalar or list")
+        ERR("options are not scalar or list")
+    } else if (isKey(k, "scripts")) {
+      if (!k.second.IsMap())
+        ERR("scripts should be a map")
+        for (auto secScripts : k.second) {
+          const auto section = AsString(secScripts.first);
+          if (spec.scripts.find(section) != spec.scripts.end())
+            ERR("duplicate 'scripts/" << section << "'")
+          spec.scripts[AsString(secScripts.first)] = parseScriptsSection(section, secScripts.second);
+        }
     } else {
       ERR("unknown top-level element '" << k.first << "' in spec")
     }
@@ -213,5 +299,10 @@ void Spec::validate() const {
   for (auto &o : options)
     if (allOptions.find(o) == allOptions.end())
       ERR("the unknown option '" << o << "' was supplied")
+
+  // script sections must be from the supported set
+  for (auto &s : scripts)
+    if (allScriptSections.find(s.first) == allScriptSections.end())
+      ERR("the unknown script section '" << s.first << "' was supplied")
 }
 

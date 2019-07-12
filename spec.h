@@ -1,6 +1,7 @@
 #include <string>
 #include <vector>
 #include <set>
+#include <map>
 
 class Spec {
 public:
@@ -18,6 +19,8 @@ public:
   std::vector<std::pair<std::string, std::string>>   dirsShare;               // any number of directories can be shared, {from -> to} mappings are elements
 
   std::set<std::string>                              options;                 // various options that this spec uses
+
+  std::map<std::string, std::map<std::string, std::string>> scripts;          // by section, by script name
 
   void validate() const;
   Spec preprocess() const;
