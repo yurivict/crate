@@ -1,5 +1,5 @@
 
-SRCS=	main.cpp args.cpp spec.cpp create.cpp run.cpp locs.cpp cmd.cpp mount.cpp misc.cpp util.cpp
+SRCS=	main.cpp args.cpp spec.cpp create.cpp run.cpp locs.cpp cmd.cpp mount.cpp scripts.cpp misc.cpp util.cpp
 OBJS=   $(SRCS:.cpp=.o)
 
 PREFIX   ?=  /usr/local
@@ -23,7 +23,15 @@ crate.x: crate
 	sudo install -s -m 04755 -o 0 -g 0 crate crate.x
 
 clean:
-	rm -f $(OBJS) crate
+	rm -f $(OBJS) crate lst-all-script-sections.h
+
+# generated sources
+lst-all-script-sections.h: create.cpp run.cpp
+	@(echo "static std::set<std::string> allScriptSections = {\"\"" && \
+	  grep -h "runScript(" create.cpp run.cpp | sed -e 's|.*runScript(|, |; s|);||' && \
+	  echo "};" \
+	 ) >> $@
+spec.cpp: lst-all-script-sections.h
 
 # shortcuts
 a: all

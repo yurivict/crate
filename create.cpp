@@ -4,6 +4,7 @@
 #include "locs.h"
 #include "cmd.h"
 #include "mount.h"
+#include "scripts.h"
 #include "util.h"
 #include "commands.h"
 
@@ -177,7 +178,7 @@ static void removeRedundantJailParts(const std::string &jailPath, const Spec &sp
     if (spec.runExecutable.empty())
       keepFile("/bin/sleep");       // our idle script runs
   }
-  keepFile("/bin/sh"); // allow to create a user in jail, the user has to have the default shell
+  keepFile("/bin/sh"); // (1) allow to create a user in jail, the user has to have the default shell (2) needed to run scrips when they are specified
   keepFile("/usr/bin/env"); // allow to pass environment to jail
   keepFile("/usr/sbin/pw"); // allow to add users in jail
   keepFile("/usr/sbin/pwd_mkdb"); // allow to add users in jail
@@ -246,11 +247,19 @@ bool createCrate(const Args &args, const Spec &spec) {
   if (res == -1)
     ERR("failed to create the jail directory '" << jailPath << "': " << strerror(errno))
 
+  // helper
+  auto runScript = [&jailPath,&spec](const char *section) {
+    Scripts::section(section, spec.scripts, [&jailPath,section](const std::string &cmd) {
+      runChrootCommand(jailPath, cmd, CSTR("script#" << section));
+    });
+  };
+
   // unpack the base archive
   LOG("unpacking the base archive")
   Util::runCommand(STR("cat " << Locations::baseArchive
                        << " | " << Cmd::xz << " --decompress | tar -xf - --uname \"\" --gname \"\" -C " << jailPath),
                    "unpack the system base into the jail directory");
+  runScript("create:start");
 
   // copy /etc/resolv.conf into the jail directory such that pkg would be able to resolve addresses
   Util::Fs::copyFile("/etc/resolv.conf", STR(jailPath << "/etc/resolv.conf"));
@@ -289,6 +298,9 @@ bool createCrate(const Args &args, const Spec &spec) {
   // write the +CRATE-SPEC file
   LOG("write the +CRATE.SPEC file")
   Util::Fs::copyFile(args.createSpec, STR(jailPath << "/+CRATE.SPEC"));
+
+  // scripts: end-create
+  runScript("create:end");
 
   // pack the jail into a .crate file
   LOG("creating the crate file " << crateFileName)

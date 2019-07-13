@@ -4,6 +4,7 @@
 #include "locs.h"
 #include "cmd.h"
 #include "mount.h"
+#include "scripts.h"
 #include "util.h"
 #include "commands.h"
 
@@ -94,6 +95,14 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   // parse +CRATE.SPEC
   auto spec = parseSpec(J("/+CRATE.SPEC")).preprocess();
 
+  // helper
+  auto runScript = [&jailPath,&spec](const char *section) {
+    Scripts::section(section, spec.scripts, [&jailPath,section](const std::string &cmd) {
+      Util::runCommand(STR("ASSUME_ALWAYS_YES=yes /usr/sbin/chroot " << jailPath << " " << cmd), CSTR("script#" << section));
+    });
+  };
+  runScript("run:begin");
+
   // mount devfs
   mount(new Mount("devfs", J("/dev"), ""));
 
@@ -129,6 +138,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   }
 
   // create jail
+  runScript("run:before-create-jail");
   LOG("creating jail " << jailXname)
   res = ::jail_setv(JAIL_CREATE,
     "path", jailPath.c_str(),
@@ -141,6 +151,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   if (res == -1)
     ERR("failed to create jail: " << jail_errmsg)
   int jid = res;
+  runScript("run:after-create-jail");
   LOG("jail " << jailXname << " has been created, jid=" << jid)
 
   // helpers
@@ -209,9 +220,11 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   }
 
   // start services, if any
+  runScript("run:before-start-services");
   if (!spec.runServices.empty())
     for (auto &service : spec.runServices)
       runCommandInJail(STR("/usr/sbin/service " << service << " onestart"), "start the service in jail");
+  runScript("run:after-start-services");
 
   // copy X11 authentication files into the user's home directory in jail
   if (spec.optionExists("x11")) {
@@ -224,6 +237,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   }
 
   // run the process
+  runScript("run:before-execute");
   int returnCode = 0;
   if (!spec.runExecutable.empty()) {
     LOG("running the command in jail: env=" << jailEnv)
@@ -261,6 +275,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
     // run it the same way as we would any other command
     returnCode = ::system(CSTR("jexec -l -U " << user << " " << jid << " " << cmdFile));
   }
+  runScript("run:after-execute");
 
   // stop services, if any
   if (!spec.runServices.empty())
@@ -279,10 +294,12 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   }
 
   // stop and remove jail
+  runScript("run:before-remove-jail");
   LOG("removing jail " << jailXname << " jid=" << jid << " ...")
   res = ::jail_remove(jid);
   if (res == -1)
     ERR("failed to remove jail: " << strerror(errno))
+  runScript("run:after-remove-jail");
   LOG("removing jail " << jailXname << " jid=" << jid << " done")
 
   // unmount all
@@ -291,6 +308,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
 
   // remove the jail directory
   LOG("removing the jail directory " << jailPath << " ...")
+  runScript("run:end");
   Util::Fs::rmdirHier(jailPath);
   LOG("removing the jail directory " << jailPath << " done")
 

@@ -14,6 +14,8 @@
 #include <iostream>
 #include <sstream>
 
+#include "lst-all-script-sections.h" // generated from create.cpp and run.cpp by the Makefile
+
 #define ERR(msg...) \
   { \
     std::cerr << rang::fg::red << "spec parser: " << msg << rang::style::reset << std::endl; \
@@ -22,8 +24,6 @@
 
 // various sets
 static std::set<std::string> allOptions = {"x11", "net", "ssl-certs", "video", "gl", "dbg-ktrace"};
-static std::set<std::string> allScriptSections = {"start-create", "end-create",
-                                                  "start-run", "pre-run", "post-run", "end-run"};
 
 // helpers
 static std::string AsString(const YAML::Node &node) {
@@ -302,7 +302,7 @@ void Spec::validate() const {
 
   // script sections must be from the supported set
   for (auto &s : scripts)
-    if (allScriptSections.find(s.first) == allScriptSections.end())
+    if (s.first.empty() || allScriptSections.find(s.first) == allScriptSections.end())
       ERR("the unknown script section '" << s.first << "' was supplied")
 }
 
