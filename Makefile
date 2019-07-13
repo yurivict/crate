@@ -30,7 +30,9 @@ lst-all-script-sections.h: create.cpp run.cpp
 	@(echo "static std::set<std::string> allScriptSections = {\"\"" && \
 	  grep -h "runScript(" create.cpp run.cpp | sed -e 's|.*runScript(|, |; s|);||' && \
 	  echo "};" \
-	 ) >> $@
+	 ) > $@
+	@touch spec.cpp
+	@echo "generate $@"
 spec.cpp: lst-all-script-sections.h
 
 # shortcuts
