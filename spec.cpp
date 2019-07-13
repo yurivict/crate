@@ -233,7 +233,7 @@ Spec parseSpec(const std::string &fname) {
   return spec;
 }
 
-// preprocess function processes some options, etc. for simplicity of use both by users and by out 'create' module
+// the preprocess function processes some options for simplicity of use both by users and by our 'create' module
 Spec Spec::preprocess() const {
   Spec spec = *this;
 
