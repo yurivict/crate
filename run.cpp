@@ -171,6 +171,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
     Util::Fs::mkdir(J("/home"), 0755);
     Util::Fs::mkdir(J(homeDir), 0755);
     Util::Fs::chown(J(homeDir), myuid, mygid);
+    runScript("run:before-create-users");
     LOG("add group " << user << " in jail")
     runCommandInJail(STR("/usr/sbin/pw groupadd " << user << " -g " << mygid), "add the group in jail");
     LOG("add user " << user << " in jail")
@@ -206,6 +207,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
         WARN("the app expects video, but no video devices are present")
       }
     }
+    runScript("run:after-create-users");
   }
 
   // share directories if requested
