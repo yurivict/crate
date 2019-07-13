@@ -250,7 +250,7 @@ bool createCrate(const Args &args, const Spec &spec) {
   // helper
   auto runScript = [&jailPath,&spec](const char *section) {
     Scripts::section(section, spec.scripts, [&jailPath,section](const std::string &cmd) {
-      runChrootCommand(jailPath, cmd, CSTR("script#" << section));
+      runChrootCommand(jailPath, cmd, CSTR("run script#" << section));
     });
   };
 

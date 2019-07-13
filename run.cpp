@@ -98,7 +98,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   // helper
   auto runScript = [&jailPath,&spec](const char *section) {
     Scripts::section(section, spec.scripts, [&jailPath,section](const std::string &cmd) {
-      Util::runCommand(STR("ASSUME_ALWAYS_YES=yes /usr/sbin/chroot " << jailPath << " " << cmd), CSTR("script#" << section));
+      Util::runCommand(STR("ASSUME_ALWAYS_YES=yes /usr/sbin/chroot " << jailPath << " " << cmd), CSTR("run script#" << section));
     });
   };
   runScript("run:begin");
