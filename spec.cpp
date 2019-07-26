@@ -22,7 +22,7 @@
     exit(1); \
   }
 
-// various sets
+// all options
 static std::set<std::string> allOptions = {"x11", "net", "ssl-certs", "video", "gl", "dbg-ktrace"};
 
 // helpers
@@ -124,11 +124,11 @@ Spec parseSpec(const std::string &fname) {
   auto isKey = [](auto &k, const char *s) {
     return AsString(k.first) == s;
   };
-  auto scalar = [](auto &node, std::string &out, const char *name) {
+  auto scalar = [](auto &node, std::string &out, const char *opath) {
     if (node.IsScalar()) {
       out = AsString(node);
     } else {
-      ERR("unsupported " << name << " object type " << node.Type())
+      ERR("unsupported " << opath << " object type " << node.Type())
     }
   };
   auto listOrScalar = [](auto &node, auto &out, const char *opath) {
@@ -233,7 +233,7 @@ Spec parseSpec(const std::string &fname) {
   return spec;
 }
 
-// the preprocess function processes some options for simplicity of use both by users and by our 'create' module
+// preprocess function processes some options, etc. for simplicity of use both by users and by our 'create' module
 Spec Spec::preprocess() const {
   Spec spec = *this;
 
