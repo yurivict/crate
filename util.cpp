@@ -140,6 +140,13 @@ std::vector<std::string> splitString(const std::string &str, const std::string &
   return res;
 }
 
+std::string stripTrailingSpace(const std::string &str) {
+  unsigned sz = str.size();
+  while (sz > 0 && ::isspace(str[sz-1]))
+    sz--;
+  return str.substr(0, sz);
+}
+
 namespace Fs {
 
 namespace fs = std::filesystem;
@@ -154,19 +161,61 @@ bool dirExists(const std::string &path) {
   return ::stat(path.c_str(), &sb) == 0 && sb.st_mode & S_IFDIR;
 }
 
-void writeFile(const std::string &data, const std::string &file) {
-  int fd;
-  SYSCALL(fd = ::open(file.c_str(), O_WRONLY|O_CREAT), "open", file.c_str());
+std::vector<std::string> readFileLines(int fd) {
+  std::vector<std::string> lines;
 
+  FILE *file = ::fdopen(fd, "r");
+  char *line = nullptr;
+  size_t len = 0;
+  ssize_t read;
+  // read lines
+  while ((read = ::getline(&line, &len, file)) != -1)
+    lines.push_back(line);
+  // error?
+  if (::ferror(file))
+    ERR2("read file", "reading file failed")
+  // clean up
+  ::free(line);
+  if (::fdclose(file, nullptr) != 0)
+    std::cerr << "reading file failed: " << strerror(errno) << std::endl;
+
+  return lines;
+}
+
+size_t getFileSize(int fd) {
+  struct stat sb;
+  if (::fstat(fd, &sb) == -1)
+    ERR2("get file size", STR("failed to stat the file: " << strerror(errno)))
+  return sb.st_size;
+}
+
+void writeFile(const std::string &data, int fd) {
   auto res = ::write(fd, data.c_str(), data.size());
   if (res == -1) {
-    auto err = STR("failed to write file '" << file << "': " << strerror(errno));
+    auto err = STR("failed to write file: " << strerror(errno));
     (void)::close(fd);
     ERR2("write file", err)
   } else if (res != (int)data.size()) {
     (void)::close(fd);
-    ERR2("write file", "short write in file '" << file << "', attempted to write " << data.size() << " bytes, actually wrote only " << res << " bytes")
+    ERR2("write file", "short write in file, attempted to write " << data.size() << " bytes, actually wrote only " << res << " bytes")
   }
+}
+
+void writeFile(const std::string &data, const std::string &file) {
+  int fd;
+  SYSCALL(fd = ::open(file.c_str(), O_WRONLY|O_CREAT), "open", file.c_str());
+
+  writeFile(data, fd);
+
+  SYSCALL(::close(fd), "close", file.c_str());
+}
+
+void appendFile(const std::string &data, const std::string &file) {
+  int fd;
+  SYSCALL(fd = ::open(file.c_str(), O_WRONLY|O_CREAT|O_APPEND), "open", file.c_str());
+
+  writeFile(data, fd);
+
   SYSCALL(::close(fd), "close", file.c_str());
 }
 

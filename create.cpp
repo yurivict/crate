@@ -174,10 +174,38 @@ static void removeRedundantJailParts(const std::string &jailPath, const Spec &sp
     keepFile("/usr/bin/grep");      // ?? needed?
     keepFile("/sbin/sysctl");       // ??
     keepFile("/usr/bin/limits");    // ??
+    keepFile("/usr/bin/sed");       // needed for /etc/rc.d/netif restart
+    keepFile("/bin/kenv");          // needed for /etc/rc.d/netif restart
     keepFile("/usr/sbin/daemon");   // services are often run with daemon(8)
     if (spec.runExecutable.empty())
       keepFile("/bin/sleep");       // our idle script runs
   }
+  //keepFile("/sbin/rcorder");        // needed for /etc/rc
+  //keepFile("/usr/sbin/ip6addrctl"); // needed for /etc/rc
+  //keepFile("/usr/sbin/syslogd");    // needed for /etc/rc
+  //keepFile("/usr/bin/mktemp");      // needed for /etc/rc
+  //keepFile("/sbin/mdmfs");          // needed for /etc/rc
+  //keepFile("/bin/chmod");           // needed for /etc/rc
+  //keepFile("/usr/bin/find");        // needed for /etc/rc
+  //keepFile("/bin/mkdir");           // needed for /etc/rc
+  //keepFile("/usr/sbin/utx");        // needed for /etc/rc
+  //keepFile("/usr/bin/uname");       // needed for /etc/rc
+  //keepFile("/usr/bin/cmp");         // needed for /etc/rc
+  //keepFile("/bin/cp");              // needed for /etc/rc
+  //keepFile("/bin/chmod");           // needed for /etc/rc
+  //keepFile("/bin/rm");              // needed for /etc/rc
+  //keepFile("/bin/rmdir");           // needed for /etc/rc
+  keepFile("/sbin/sysctl");         // needed for /etc/rc.shutdown
+  if (spec.optionExists("net")) {
+    keepFile("/sbin/ifconfig");       // needed to set up interfaces
+    keepFile("/sbin/route");          // needed to set the default route
+    keepFile("/sbin/ipfw");           // needed to set firewall rules
+    keepFile("/usr/sbin/service");    // ??? needed for "net"-enabled crates to start the service ???
+    keepFile("/sbin/kldstat");        // ??? needed for "net"-enabled crates to start the service ???
+    keepFile("/sbin/kldload");        // ??? needed for "net"-enabled crates to start the service ???
+  }
+  keepFile("/bin/sleep");           // needed for /etc/rc.shutdown
+  keepFile("/bin/date");            // needed for /etc/rc.shutdown
   keepFile("/bin/sh"); // (1) allow to create a user in jail, the user has to have the default shell (2) needed to run scrips when they are specified
   keepFile("/usr/bin/env"); // allow to pass environment to jail
   keepFile("/usr/sbin/pw"); // allow to add users in jail

@@ -5,6 +5,7 @@
 #include "cmd.h"
 #include "mount.h"
 #include "scripts.h"
+#include "ctx.h"
 #include "util.h"
 #include "commands.h"
 
@@ -50,9 +51,11 @@ static uid_t myuid = ::getuid();
 static gid_t mygid = ::getgid();
 static const char* user = ::getenv("USER");
 
-// network params
-static const char *netIface = "sk0";
-static const char *netIPv4 = "192.168.5.203";
+// options
+static bool optionInitializeRc = false; // this pulls a lot of dependencies, and starts a lot of things that we don't need in crate
+static unsigned fwRuleBase = 59000; // ipfw rule number base
+static const char *gwIface = "sk0";
+static const char *hostIP = "192.168.5.3";
 
 //
 // helpers
@@ -84,7 +87,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   // mounts
   std::list<std::unique_ptr<Mount>> mounts;
   auto mount = [&mounts](Mount *m) {
-    mounts.push_front(std::unique_ptr<Mount>(m)); // push_front so that the last added is also last removed
+    mounts.push_front(std::unique_ptr<Mount>(m)); // push_front so that the last added is also the last removed
     m->mount();
   };
 
@@ -94,6 +97,10 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
 
   // parse +CRATE.SPEC
   auto spec = parseSpec(J("/+CRATE.SPEC")).preprocess();
+
+  // check if VIMAGE feature is compiled into the kernel
+  if (spec.optionExists("net") && Util::getSysctlInt("kern.features.vimage") == 0)
+    ERR("the crate needs network access, but the VIMAGE feature isn't available in the kernel (kern.features.vimage==0)")
 
   // helper
   auto runScript = [&jailPath,&spec](const char *section) {
@@ -130,23 +137,19 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
       ERR("DISPLAY environment variable is not set")
     setJailEnv("DISPLAY", display);
   }
-  if (spec.optionExists("net")) {
-    // copy /etc/resolv.conf into jail
-    Util::Fs::copyFile("/etc/resolv.conf", J("/etc/resolv.conf"));
-    // enable the IP alias, which enables networking both inside and outside of jail
-    Util::runCommand(STR("ifconfig " << netIface << " alias " << netIPv4 << " netmask 0xffffffff"), "enable networking in /etc/rc.conf");
-  }
 
-  // create jail
+  // create jail // also see https://www.cyberciti.biz/faq/how-to-configure-a-freebsd-jail-with-vnet-and-zfs/
   runScript("run:before-create-jail");
   LOG("creating jail " << jailXname)
+  const char *optNet = spec.optionExists("net") ? "true" : "false";
   res = ::jail_setv(JAIL_CREATE,
     "path", jailPath.c_str(),
+    //"host.hostname", ON_USE_VNET_NOT(Util::gethostname().c_str()) ON_USE_VNET("rsnapshot"),
     "host.hostname", Util::gethostname().c_str(),
-    "ip4.addr", spec.optionExists("net") ? netIPv4 : nullptr,
     "persist", nullptr,
-    "allow.raw_sockets", spec.optionExists("net") ? "true" : "false",
-    "allow.socket_af", spec.optionExists("net") ? "true" : "false",
+    "allow.raw_sockets", optNet, // allow ping-pong
+    "allow.socket_af", optNet,
+    "vnet", nullptr/*"new"*/, // possible values are: nullptr, { "disable", "new", "inherit" }, see lib/libjail/jail.c
     nullptr);
   if (res == -1)
     ERR("failed to create jail: " << jail_errmsg)
@@ -154,16 +157,106 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   runScript("run:after-create-jail");
   LOG("jail " << jailXname << " has been created, jid=" << jid)
 
-  // helpers
+  // helpers for jail access
   auto runCommandInJail = [jid](auto cmd, auto descr) {
     Util::runCommand(STR("jexec " << jid << " " << cmd), descr);
+  };
+  auto runCommandInJailSilently = [jid](auto cmd, auto descr) {
+    Util::runCommand(STR("jexec " << jid << " " << cmd << " > /dev/null"), descr);
   };
   auto writeFileInJail = [J](auto str, auto file) {
     Util::Fs::writeFile(str, J(file));
   };
+  auto appendFileInJail = [J](auto str, auto file) {
+    Util::Fs::appendFile(str, J(file));
+  };
+
+  // set up networking
+  RunAtEnd destroyPipeAtEnd;
+  RunAtEnd destroyFiewallRulesAtEnd;
+  if (spec.optionExists("net")) {
+    // copy /etc/resolv.conf into jail
+    Util::Fs::copyFile("/etc/resolv.conf", J("/etc/resolv.conf"));
+    // create the epipe
+    // set the lo0 IP address (lo0 is always automatically present in vnet jails)
+    runCommandInJail(STR("ifconfig lo0 inet 127.0.0.1"), "set up the lo0 interface in jail");
+    // create networking interface
+    //auto pipeIface = Net::createJailInterface(jailPath);
+    std::string pipeIfaceA = Util::stripTrailingSpace(Util::runCommandGetOutput("ifconfig epair create", "create the jail pipe"));
+    std::string pipeIfaceB = STR(pipeIfaceA.substr(0, pipeIfaceA.size()-1) << "b"); // jail side
+    unsigned epairNum = std::stoul(pipeIfaceA.substr(5/*skip epair*/, pipeIfaceA.size()-5-1));
+    auto numToIp = [](unsigned epairNum, unsigned ipIdx2) {
+      // XXX use 10.0.0.0/8 network for this purpose because number of containers can be large, and we need to have that many IP addresses available
+      unsigned ip = 100 + 2*epairNum + ipIdx2; // 100 to avoid the addresses .0 and .1
+      unsigned ip1 = ip % 256;
+      ip /= 256;
+      unsigned ip2 = ip % 256;
+      ip /= 256;
+      unsigned ip3 = ip;
+      return STR("10." << ip3 << "." << ip2 << "." << ip1);
+    };
+    auto pipeIpA = numToIp(epairNum, 0), pipeIpB = numToIp(epairNum, 1);
+    // transfer the interface into jail
+    Util::runCommand(STR("ifconfig " << pipeIfaceB << " vnet " << jid), "transfer the network interface into jail");
+    // set the IP addresses on the jail pipe
+    runCommandInJail(STR("ifconfig " << pipeIfaceB << " inet " << pipeIpB << " netmask 0xfffffffe"), "set up IP jail pipe addresses");
+    Util::runCommand(STR("ifconfig " << pipeIfaceA << " inet " << pipeIpA << " netmask 0xfffffffe"), "set up IP jail pipe addresses");
+    // enable firewall in jail
+    //if (optionInitializeRc)
+      appendFileInJail(STR(
+          "firewall_enable=\"YES\""             << std::endl <<
+          "firewall_type=\"open\""              << std::endl
+        ),
+        "/etc/rc.conf");
+    // set default route in jail
+    runCommandInJailSilently(STR("route add default " << pipeIpA), "set default route in jail");
+    // destroy the pipe when finished
+    destroyPipeAtEnd.reset([pipeIfaceA]() {
+      Util::runCommand(STR("ifconfig " << pipeIfaceA << " destroy"), CSTR("destroy the jail pipe (" << pipeIfaceA << ")"));
+    });
+    // add firewall rules to NAT and route packets from jails to host's default GW
+    if (true) {
+      auto fwNatNo = fwRuleBase;
+      auto fwRuleNo = [epairNum]() {return fwRuleBase + 2 + epairNum;};
+      { // single rules
+        std::unique_ptr<Ctx::FwUsers> fwUsers(Ctx::FwUsers::lock());
+        if (fwUsers->isEmpty()) {
+          Util::runCommand(STR("ipfw -q nat " << fwNatNo << " config ip " << hostIP << " reset"), "add firewall rule");
+          Util::runCommand(STR("ipfw -q add " << (fwRuleBase + 1) << " nat " << fwNatNo << " all from any to " << hostIP << " in recv " << gwIface), "add firewall rule");
+        }
+        fwUsers->add(::getpid());
+        fwUsers->unlock();
+      }
+      // rule for this pipe
+      Util::runCommand(STR("ipfw -q add " << fwRuleNo() << " nat " << fwNatNo << " all from " << pipeIpB << " to any out xmit " << gwIface), "add firewall rule");
+      //
+      destroyFiewallRulesAtEnd.reset([fwRuleNo]() {
+        // delete the rule for this pipe
+        Util::runCommand(STR("ipfw delete " << fwRuleNo()), CSTR("destroy firewall rule"));
+        { // possibly delete the common rules if this is the last firewall
+          std::unique_ptr<Ctx::FwUsers> fwUsers(Ctx::FwUsers::lock());
+          fwUsers->del(::getpid());
+          if (fwUsers->isEmpty())
+            Util::runCommand(STR("ipfw delete " << (fwRuleBase + 1)), CSTR("destroy firewall rule"));
+          fwUsers->unlock();
+        }
+      });
+    }
+  }
+
+  // disable services that normally start by default, but aren't desirable in crates
+  if (optionInitializeRc)
+    appendFileInJail(STR(
+        "sendmail_enable=\"NO\""         << std::endl <<
+        "cron_enable=\"NO\""             << std::endl
+      ),
+      "/etc/rc.conf");
 
   // rc-initializion (is this really needed?) This depends on the executables /bin/kenv, /sbin/sysctl, /bin/date which need to be kept during the 'create' phase
-  //runCommandInJail("/bin/sh /etc/rc", "exec.start");
+  if (optionInitializeRc)
+    runCommandInJailSilently("/bin/sh /etc/rc", "exec.start");
+  else
+    runCommandInJailSilently("service ipfw start > /dev/null", "start firewall in jail");
 
   // add the same user to jail, make group=user for now
   {
@@ -176,6 +269,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
     runCommandInJail(STR("/usr/sbin/pw groupadd " << user << " -g " << mygid), "add the group in jail");
     LOG("add user " << user << " in jail")
     runCommandInJail(STR("/usr/sbin/pw useradd " << user << " -u " << myuid << " -g " << mygid << " -s /bin/sh -d " << homeDir), "add the user in jail");
+    runCommandInJail(STR("/usr/sbin/pw usermod " << user << " -G wheel"), "add the group to the user");
     // "video" option requires the corresponding user/group: create the identical user/group to jail
     if (spec.optionExists("video")) {
       static const char *devName = "/dev/video";
@@ -288,12 +382,8 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
     Util::Fs::copyFile(J(STR(homeDir << "/ktrace.out")), "ktrace.out");
 
   // rc-uninitializion (is this really needed?)
-  //runCommandInJail("/bin/sh /etc/rc.shutdown", "exec.stop");
-
-  // turn options off
-  if (spec.optionExists("net")) {
-    Util::runCommand(STR("ifconfig " << netIface << " -alias " << netIPv4), "enable networking in /etc/rc.conf");
-  }
+  if (optionInitializeRc)
+    runCommandInJail("/bin/sh /etc/rc.shutdown", "exec.stop");
 
   // stop and remove jail
   runScript("run:before-remove-jail");

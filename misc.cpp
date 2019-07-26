@@ -24,8 +24,8 @@ static void createDirectoryIfNeeded(const char *dir, const char *what) {
 // interface
 //
 
-void createJailsDirectoryIfNeeded() {
-  createDirectoryIfNeeded(Locations::jailDirectoryPath, "jails");
+void createJailsDirectoryIfNeeded(const char *subdir) {
+  createDirectoryIfNeeded(CSTR(Locations::jailDirectoryPath << subdir), "jails");
 }
 
 void createCacheDirectoryIfNeeded() {

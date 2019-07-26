@@ -5,6 +5,7 @@
 #include <set>
 #include <iostream>
 #include <sstream>
+#include <memory>
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -59,6 +60,29 @@ inline std::vector<T> operator+(const std::vector<T> &v1, const std::vector<T> &
   return res;
 }
 
+class Run {
+public:
+  Run(const std::function<void()> &fnAction) { fnAction(); }
+};
+
+class OnDestroy {
+  std::function<void()> fnAction;
+public:
+  OnDestroy(const std::function<void()> &newFnAction) : fnAction(newFnAction) { }
+  ~OnDestroy() {
+    fnAction();
+  }
+};
+
+class RunAtEnd : public std::unique_ptr<OnDestroy> {
+public:
+  RunAtEnd() { }
+  RunAtEnd(const std::function<void()> &newFnAction) : std::unique_ptr<OnDestroy>(new OnDestroy(newFnAction)) { }
+  void reset(const std::function<void()> &newFnAction) {
+    std::unique_ptr<OnDestroy>::reset(new OnDestroy(newFnAction));
+  }
+};
+
 //
 // utility functions
 //
@@ -74,12 +98,17 @@ std::string filePathToFileName(const std::string &path);
 int getSysctlInt(const char *name);
 std::string gethostname();
 std::vector<std::string> splitString(const std::string &str, const std::string &delimiter);
+std::string stripTrailingSpace(const std::string &str);
 
 namespace Fs {
 
 bool fileExists(const std::string &path);
 bool dirExists(const std::string &path);
+std::vector<std::string> readFileLines(int fd);
+size_t getFileSize(int fd);
+void writeFile(const std::string &data, int fd);
 void writeFile(const std::string &data, const std::string &file);
+void appendFile(const std::string &data, const std::string &file);
 void chmod(const std::string &path, mode_t mode);
 void chown(const std::string &path, uid_t owner, gid_t group);
 void unlink(const std::string &file);

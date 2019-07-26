@@ -1,5 +1,5 @@
 
-SRCS=	main.cpp args.cpp spec.cpp create.cpp run.cpp locs.cpp cmd.cpp mount.cpp scripts.cpp misc.cpp util.cpp
+SRCS=	main.cpp args.cpp spec.cpp create.cpp run.cpp locs.cpp cmd.cpp mount.cpp ctx.cpp scripts.cpp misc.cpp util.cpp
 OBJS=   $(SRCS:.cpp=.o)
 
 PREFIX   ?=  /usr/local
