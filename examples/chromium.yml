@@ -10,10 +10,10 @@ pkg:
     nuke:
         - python27
         - python36
-        - linux-c6-expat
-        - linux-c6-fontconfig
-        - linux-c6-xorg-libs
-        - linux_base-c6
+        - linux-c7-expat
+        - linux-c7-fontconfig
+        - linux-c7-xorg-libs
+        - linux_base-c7
 
 run:
     executable: /usr/local/bin/chrome

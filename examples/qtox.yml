@@ -7,8 +7,6 @@ pkg:
     install:
         - qTox
         - dbus
-    local-override:
-        qTox: /usr/ports/net-im/qTox/work/pkg/qTox-1.16.3.529_3.txz
 
 run:
     executable: /usr/local/bin/qtox
