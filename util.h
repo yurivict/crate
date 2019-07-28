@@ -6,6 +6,7 @@
 #include <iostream>
 #include <sstream>
 #include <memory>
+#include <functional>
 
 #include <stdlib.h>
 #include <unistd.h>
