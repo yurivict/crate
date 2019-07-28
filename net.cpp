@@ -50,12 +50,14 @@ std::vector<IpInfo> getIfaceIp4Addresses(const std::string &ifaceName) {
     return ss.str();
   };
 
+  // get all addresses of all interfaces
   if (::getifaddrs(&ifap) == -1)
     ERR2("network interface", "getifaddrs() failed: " << strerror(errno))
   RunAtEnd destroyAddresses([ifap]() {
     ::freeifaddrs(ifap);
   });
 
+  // filter only IPv4 addresses for the requested interface
   for (struct ifaddrs *a = ifap; a; a = a->ifa_next)
     if (a->ifa_addr->sa_family == AF_INET && ::strcmp(a->ifa_name, ifaceName.c_str()) == 0) { // IPv4 for the requested interface
       res = ::getnameinfo(a->ifa_addr,
