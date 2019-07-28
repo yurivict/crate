@@ -55,6 +55,8 @@ static const char* user = ::getenv("USER");
 // options
 static bool optionInitializeRc = false; // this pulls a lot of dependencies, and starts a lot of things that we don't need in crate
 static unsigned fwRuleBase = 59000; // ipfw rule number base
+
+// hosts's default gateway network parameters
 static std::string gwIface;
 static std::string hostIP;
 static std::string hostLAN;
