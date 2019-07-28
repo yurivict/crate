@@ -34,8 +34,8 @@ static std::string AsString(const YAML::Node &node) {
 static void Add(std::vector<std::string> &container, const std::string &val) {
   container.push_back(val);
 }
-static void Add(std::set<std::string> &container, const std::string &val) {
-  container.insert(val);
+static void Add(std::map<std::string, std::shared_ptr<Spec::OptDetails>> &container, const std::string &val) {
+  (void)container[val];
 }
 
 static std::map<std::string, std::string> parseScriptsSection(const std::string &section, const YAML::Node &node) {
@@ -110,6 +110,109 @@ static std::map<std::string, std::string> parseScriptsSection(const std::string 
   } else {
     ERR(errMsg << " '" << section << "' #3")
   }
+}
+
+//
+// methods
+//
+
+Spec::OptDetails::~OptDetails() {
+}
+
+Spec::NetOptDetails::NetOptDetails() // default "net" options allow all outbound and no inbound
+: allowOutbound(false),
+  banOutboundHost(false),
+  banOutboundLan(false)
+{ }
+
+Spec::NetOptDetails* Spec::NetOptDetails::createDefault() {
+  auto d = new NetOptDetails;
+  d->allowOutbound = true; // all outbound is allowed by default
+  return d;
+}
+
+bool Spec::optionExists(const char* opt) const {
+  return options.find(opt) != options.end();
+}
+
+const Spec::NetOptDetails* Spec::optionNet() const {
+  auto it = options.find("net");
+  if (it == options.end())
+    return nullptr;
+  return static_cast<const Spec::NetOptDetails*>(it->second.get());
+}
+
+// preprocess function processes some options, etc. for simplicity of use both by users and by our 'create' module
+Spec Spec::preprocess() const {
+  Spec spec = *this;
+
+  // helpers
+  auto O = [&spec](auto o, bool keep) {
+    if (spec.optionExists(o)) {
+      if (!keep)
+        spec.options.erase(o);
+      return true;
+    }
+    return false;
+  };
+
+  // ssl-certs option => install the ca_root_nss package
+  if (O("ssl-certs", false))
+    spec.pkgInstall.push_back("ca_root_nss");
+
+  // gl option => install nvidia-driver & mesa-dri (XXX for now it only works on nvidia-card-based systems)
+  if (O("gl", false)) {
+    spec.pkgInstall.push_back("mesa-dri");
+    spec.pkgInstall.push_back("nvidia-driver");
+  }
+
+  // dbg-ktrace option => keep the ktrace executable
+  if (O("dbg-ktrace", true))
+    spec.baseKeep.push_back("/usr/bin/ktrace");
+
+  return spec;
+}
+
+void Spec::validate() const {
+  // helpers
+  auto isFullPath = [](const std::string &path) {
+    return path[0] == '/';
+  };
+
+  // should be something to run
+  if (runExecutable.empty() && runServices.empty())
+    ERR("crate has to have either the executable to run, some services to run, or both, it can't have nothing to do")
+
+  // should be no conflicting package local overrides
+  if (!pkgLocalOverride.empty()) {
+    std::map<std::string, std::string> pkgs;
+    for (auto &lo : pkgLocalOverride) {
+      if (pkgs.find(lo.first) != pkgs.end())
+        ERR("duplicate local override packages: " << lo.first << "->" << pkgs[lo.first] << " and " << lo.first << "->" << lo.second)
+      pkgs[lo.first] = lo.second;
+    }
+  }
+
+  // executable must have full path
+  if (!runExecutable.empty()) {
+    if (!isFullPath(runExecutable))
+      ERR("the executable path has to be a full path, executable=" << runExecutable)
+  }
+
+  // shared directories must be full paths
+  for (auto &dirShare : dirsShare)
+    if (!isFullPath(dirShare.first) || !isFullPath(dirShare.second))
+      ERR("the shared directory paths have to be a full paths, share=" << dirShare.first << "->" << dirShare.second)
+
+  // options must be from the supported set
+  for (auto &o : options)
+    if (allOptions.find(o.first) == allOptions.end())
+      ERR("the unknown option '" << o.first << "' was supplied")
+
+  // script sections must be from the supported set
+  for (auto &s : scripts)
+    if (s.first.empty() || allScriptSections.find(s.first) == allScriptSections.end())
+      ERR("the unknown script section '" << s.first << "' was supplied")
 }
 
 //
@@ -214,8 +317,43 @@ Spec parseSpec(const std::string &fname) {
         }
       }
     } else if (isKey(k, "options")) {
-      if (!listOrScalar(k.second, spec.options, "pkg/options"))
-        ERR("options are not scalar or list")
+      if (listOrScalar(k.second, spec.options, "options")) {
+        // set details to options
+        auto it = spec.options.find("net");
+        if (it != spec.options.end())
+          it->second.reset(Spec::NetOptDetails::createDefault()); // default "net" option details
+      } else if (k.second.IsMap()) {
+        // options are a map: they are in the extended format, parse them in a custom fashion, one by one
+        for (auto lo : k.second) {
+          auto sopt = AsString(lo.first);
+          auto &optVal = spec.options[sopt];
+          if (sopt == "net") {
+            if (!lo.second.IsMap() && !lo.second.IsNull())
+              ERR("options/net value should be a map or empty when options are in the extended format")
+            if (lo.second.IsMap()) {
+              optVal.reset(new Spec::NetOptDetails); // blank "net" option details
+              auto optNetDetails = static_cast<Spec::NetOptDetails*>(optVal.get());
+              for (auto netOpt : lo.second) {
+                if (AsString(netOpt.first) == "allow-outbound")
+                  optNetDetails->allowOutbound = netOpt.second.as<bool>();
+                else if (AsString(netOpt.first) == "ban-outbound-host")
+                  optNetDetails->banOutboundHost = netOpt.second.as<bool>();
+                else if (AsString(netOpt.first) == "ban-outbound-lan")
+                  optNetDetails->banOutboundLan = netOpt.second.as<bool>();
+                else
+                  ERR("an invalid value options/net/" << netOpt.first << " supplied")
+              }
+            } else {
+              optVal.reset(Spec::NetOptDetails::createDefault()); // default "net" option details
+            }
+          } else {
+            if (!lo.second.IsNull())
+              ERR("options/* values should be empty when options are in the extended format")
+          }
+        }
+      } else {
+        ERR("options are not scalar, list or map")
+      }
     } else if (isKey(k, "scripts")) {
       if (!k.second.IsMap())
         ERR("scripts should be a map")
@@ -231,78 +369,5 @@ Spec parseSpec(const std::string &fname) {
   }
 
   return spec;
-}
-
-// preprocess function processes some options, etc. for simplicity of use both by users and by our 'create' module
-Spec Spec::preprocess() const {
-  Spec spec = *this;
-
-  // helpers
-  auto O = [&spec](auto o, bool keep) {
-    if (spec.optionExists(o)) {
-      if (!keep)
-        spec.options.erase(o);
-      return true;
-    }
-    return false;
-  };
-
-  // ssl-certs option => install the ca_root_nss package
-  if (O("ssl-certs", false))
-    spec.pkgInstall.push_back("ca_root_nss");
-
-  // gl option => install nvidia-driver & mesa-dri (XXX for now it only works on nvidia-card-based systems)
-  if (O("gl", false)) {
-    spec.pkgInstall.push_back("mesa-dri");
-    spec.pkgInstall.push_back("nvidia-driver");
-  }
-
-  // dbg-ktrace option => keep the ktrace executable
-  if (O("dbg-ktrace", true))
-    spec.baseKeep.push_back("/usr/bin/ktrace");
-
-  return spec;
-}
-
-void Spec::validate() const {
-  // helpers
-  auto isFullPath = [](const std::string &path) {
-    return path[0] == '/';
-  };
-
-  // should be something to run
-  if (runExecutable.empty() && runServices.empty())
-    ERR("crate has to have either the executable to run, some services to run, or both, it can't have nothing to do")
-
-  // should be no conflicting package local overrides
-  if (!pkgLocalOverride.empty()) {
-    std::map<std::string, std::string> pkgs;
-    for (auto &lo : pkgLocalOverride) {
-      if (pkgs.find(lo.first) != pkgs.end())
-        ERR("duplicate local override packages: " << lo.first << "->" << pkgs[lo.first] << " and " << lo.first << "->" << lo.second)
-      pkgs[lo.first] = lo.second;
-    }
-  }
-
-  // executable must have full path
-  if (!runExecutable.empty()) {
-    if (!isFullPath(runExecutable))
-      ERR("the executable path has to be a full path, executable=" << runExecutable)
-  }
-
-  // shared directories must be full paths
-  for (auto &dirShare : dirsShare)
-    if (!isFullPath(dirShare.first) || !isFullPath(dirShare.second))
-      ERR("the shared directory paths have to be a full paths, share=" << dirShare.first << "->" << dirShare.second)
-
-  // options must be from the supported set
-  for (auto &o : options)
-    if (allOptions.find(o) == allOptions.end())
-      ERR("the unknown option '" << o << "' was supplied")
-
-  // script sections must be from the supported set
-  for (auto &s : scripts)
-    if (s.first.empty() || allScriptSections.find(s.first) == allScriptSections.end())
-      ERR("the unknown script section '" << s.first << "' was supplied")
 }
 

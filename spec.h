@@ -1,10 +1,24 @@
 #include <string>
 #include <vector>
-#include <set>
 #include <map>
+#include <memory>
 
 class Spec {
 public:
+  class OptDetails {
+  public:
+    virtual ~OptDetails() = 0;
+  };
+  class NetOptDetails : public OptDetails {
+  public:
+    NetOptDetails();
+    static NetOptDetails* createDefault();
+    typedef std::pair<unsigned,unsigned> PortRange;
+    bool allowOutbound;                  // allow outbound connections
+    bool banOutboundHost;                // ban outbound to the host
+    bool banOutboundLan;                 // ban outbound to LAN hosts
+    std::vector<std::pair<PortRange, PortRange>> inboundPorts;
+  };
   std::vector<std::string>                           baseKeep;
   std::vector<std::string>                           baseRemove;
 
@@ -18,13 +32,14 @@ public:
 
   std::vector<std::pair<std::string, std::string>>   dirsShare;               // any number of directories can be shared, {from -> to} mappings are elements
 
-  std::set<std::string>                              options;                 // various options that this spec uses
+  std::map<std::string, std::shared_ptr<OptDetails>> options;                 // various options that this spec uses
 
   std::map<std::string, std::map<std::string, std::string>> scripts;          // by section, by script name
 
-  void validate() const;
   Spec preprocess() const;
-  bool optionExists(const char* opt) const {return options.find(opt) != options.end();}
+  void validate() const;
+  bool optionExists(const char* opt) const;
+  const NetOptDetails* optionNet() const;
 };
 
 Spec parseSpec(const std::string &fname);
