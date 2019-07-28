@@ -4,6 +4,7 @@
 #include "locs.h"
 #include "cmd.h"
 #include "mount.h"
+#include "net.h"
 #include "scripts.h"
 #include "ctx.h"
 #include "util.h"
@@ -54,8 +55,8 @@ static const char* user = ::getenv("USER");
 // options
 static bool optionInitializeRc = false; // this pulls a lot of dependencies, and starts a lot of things that we don't need in crate
 static unsigned fwRuleBase = 59000; // ipfw rule number base
-static const char *gwIface = "sk0";
-static const char *hostIP = "192.168.5.3";
+static std::string gwIface;
+static std::string hostIP;
 static const char *hostLAN = "192.168.5.0/24";
 
 //
@@ -177,6 +178,22 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   RunAtEnd destroyFiewallRulesAtEnd;
   auto optionNet = spec.optionNet();
   if (optionNet && optionNet->allowOutbound) {
+    { // determine host's gateway interface
+      auto elts = Util::splitString(
+                    Util::runCommandGetOutput("netstat -rn | grep ^default | sed 's| *| |'", "determine host's gateway interface"),
+                    " "
+                  );
+      if (elts.size() != 4)
+        ERR("Unable to determine host's gateway IP and interface");
+      elts[3] = Util::stripTrailingSpace(elts[3]);
+      gwIface = elts[3];
+    }
+    { // determine host's gateway interface IP
+      auto ipv4 = Net::getIfaceIp4Addresses(gwIface);
+      if (ipv4.empty())
+        ERR("Failed to determine host's gateway interface IP: no IPv4 addresses found")
+      hostIP = ipv4[0];
+    }
     // copy /etc/resolv.conf into jail
     Util::Fs::copyFile("/etc/resolv.conf", J("/etc/resolv.conf"));
     // create the epipe
