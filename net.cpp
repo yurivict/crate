@@ -34,7 +34,7 @@ std::vector<IpInfo> getIfaceIp4Addresses(const std::string &ifaceName) {
         cnt++;
     return cnt;
   };
-  auto netFromHostAndNatmask = [countBits](const std::string &host, const std::string &netmask) {
+  auto netFromHostAndNatmaskV4 = [countBits](const std::string &host, const std::string &netmask) {
     auto hostVec =    Util::splitString(host, ".");
     auto netmaskVec = Util::splitString(netmask, ".");
     unsigned nbits = 0;
@@ -42,7 +42,7 @@ std::vector<IpInfo> getIfaceIp4Addresses(const std::string &ifaceName) {
     for (int i = 0; i < 4; i++) {
       if (i > 0)
         ss << ".";
-      auto mask = std::stoul(netmaskVec[i]);
+      uint8_t mask = std::stoul(netmaskVec[i]);
       ss << (std::stoul(hostVec[i]) & mask);
       nbits += countBits(mask);
     }
@@ -72,7 +72,7 @@ std::vector<IpInfo> getIfaceIp4Addresses(const std::string &ifaceName) {
       if (res != 0)
         ERR2("get network interface address", "getnameinfo() failed: " << ::gai_strerror(res));
 
-      addrs.push_back({host, netmask, netFromHostAndNatmask(host, netmask)});
+      addrs.push_back({host, netmask, netFromHostAndNatmaskV4(host, netmask)});
     }
 
   return addrs;
