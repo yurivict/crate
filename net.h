@@ -5,6 +5,8 @@
 
 namespace Net {
 
-std::vector<std::string> getIfaceIp4Addresses(const std::string &ifaceName);
+typedef std::tuple<std::string, std::string, std::string> IpInfo;
+
+std::vector<IpInfo> getIfaceIp4Addresses(const std::string &ifaceName);
 
 }

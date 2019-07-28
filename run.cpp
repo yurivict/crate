@@ -57,7 +57,7 @@ static bool optionInitializeRc = false; // this pulls a lot of dependencies, and
 static unsigned fwRuleBase = 59000; // ipfw rule number base
 static std::string gwIface;
 static std::string hostIP;
-static const char *hostLAN = "192.168.5.0/24";
+static std::string hostLAN;
 
 //
 // helpers
@@ -188,11 +188,12 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
       elts[3] = Util::stripTrailingSpace(elts[3]);
       gwIface = elts[3];
     }
-    { // determine host's gateway interface IP
+    { // determine host's gateway interface IP and network
       auto ipv4 = Net::getIfaceIp4Addresses(gwIface);
       if (ipv4.empty())
         ERR("Failed to determine host's gateway interface IP: no IPv4 addresses found")
-      hostIP = ipv4[0];
+      hostIP  = std::get<0>(ipv4[0]);
+      hostLAN = std::get<2>(ipv4[0]);
     }
     // copy /etc/resolv.conf into jail
     Util::Fs::copyFile("/etc/resolv.conf", J("/etc/resolv.conf"));
