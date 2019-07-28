@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
   }
   if (::getuid() == 0) {
     std::cerr << rang::fg::red << "crate has to run as a regular user setuid to root"
-                               << " (you ran it just as root)"
+                               << " (you ran it just as root, this isn't yet supported)"
                                << rang::style::reset << std::endl;
     return 1;
   }
