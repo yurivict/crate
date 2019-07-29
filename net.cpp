@@ -80,4 +80,8 @@ std::vector<IpInfo> getIfaceIp4Addresses(const std::string &ifaceName) {
   return addrs;
 }
 
+std::string getNameserverIp() {
+  return Util::stripTrailingSpace(Util::runCommandGetOutput("grep -i '^nameserver' /etc/resolv.conf | head -n1 | cut -d ' ' -f2", "find nameserver IP address"));
+}
+
 }
