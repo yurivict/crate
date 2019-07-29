@@ -239,30 +239,26 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
     // add firewall rules to NAT and route packets from jails to host's default GW
     if (true) {
       auto fwNatNo = fwRuleBase;
-      auto fwRuleNo = [epairNum](unsigned idx) {return fwRuleBase + 2 + epairNum*3 + idx;};
+      auto fwRuleNo = [epairNum](unsigned idx) {return fwRuleBase + 1/*common rules*/ + epairNum*2/*per-crate rules*/ + idx;};
       { // single rules
         std::unique_ptr<Ctx::FwUsers> fwUsers(Ctx::FwUsers::lock());
         if (fwUsers->isEmpty()) {
           Util::runCommand(STR("ipfw -q nat " << fwNatNo << " config ip " << hostIP << " reset"), "add firewall rule");
-          Util::runCommand(STR("ipfw -q add " << (fwRuleBase + 1) << " nat " << fwNatNo << " all from any to " << hostIP << " in recv " << gwIface), "add firewall rule");
+          Util::runCommand(STR("ipfw -q add " << fwRuleBase << " nat " << fwNatNo << " all from any to " << hostIP << " in recv " << gwIface), "add firewall rule");
         }
         fwUsers->add(::getpid());
         fwUsers->unlock();
       }
-      // rules for this pipe
-      Util::runCommand(STR("ipfw -q add " << fwRuleNo(0) << " nat " << fwNatNo << " all from " << pipeIpB << " to any out xmit " << gwIface), "add firewall rule");
+      // rules for this pipe: bans first
       if (optionNet->banOutboundHost)
         Util::runCommand(STR("ipfw -q add " << fwRuleNo(1) << " deny ip from " << pipeIpB << " to me"), "add firewall rule");
       if (optionNet->banOutboundLan)
-        Util::runCommand(STR("ipfw -q add " << fwRuleNo(2) << " deny ip from " << pipeIpB << " to " << hostLAN), "add firewall rule");
+        Util::runCommand(STR("ipfw -q add " << fwRuleNo(1) << " deny ip from " << pipeIpB << " to " << hostLAN), "add firewall rule");
+      Util::runCommand(STR("ipfw -q add " << fwRuleNo(1) << " nat " << fwNatNo << " all from " << pipeIpB << " to any out xmit " << gwIface), "add firewall rule");
       //
-      destroyFiewallRulesAtEnd.reset([optionNet, fwRuleNo]() {
-        // delete the rule for this pipe
-        Util::runCommand(STR("ipfw delete " << fwRuleNo(0)), CSTR("destroy firewall rule"));
-        if (optionNet->banOutboundHost)
-          Util::runCommand(STR("ipfw delete " << fwRuleNo(1)), CSTR("destroy firewall rule"));
-        if (optionNet->banOutboundLan)
-          Util::runCommand(STR("ipfw delete " << fwRuleNo(2)), CSTR("destroy firewall rule"));
+      destroyFiewallRulesAtEnd.reset([fwRuleNo]() {
+        // delete the rule(s) for this pipe
+        Util::runCommand(STR("ipfw delete " << fwRuleNo(1)), CSTR("destroy firewall rule"));
         { // possibly delete the common rules if this is the last firewall
           std::unique_ptr<Ctx::FwUsers> fwUsers(Ctx::FwUsers::lock());
           fwUsers->del(::getpid());
