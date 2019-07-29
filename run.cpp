@@ -240,6 +240,9 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
     });
     // add firewall rules to NAT and route packets from jails to host's default GW
     if (true) {
+      auto cmdFW = [](const std::string &cmd) {
+        Util::runCommand(STR("ipfw -q " << cmd), "add firewall rule");
+      };
       auto fwNatNo = fwRuleBase;
       //auto fwRuleInNo  = fwRuleBase + 1/*common rules*/ + epairNum*2/*per-crate rules*/ + 0; // "in" rules go first
       auto fwRuleCommonNo = fwRuleBase;
@@ -247,23 +250,23 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
       { // single rules
         std::unique_ptr<Ctx::FwUsers> fwUsers(Ctx::FwUsers::lock());
         if (fwUsers->isEmpty()) {
-          Util::runCommand(STR("ipfw -q nat " << fwNatNo << " config ip " << hostIP << " reset"), "add firewall rule");
-          Util::runCommand(STR("ipfw -q add " << fwRuleCommonNo << " nat " << fwNatNo << " all from any to " << hostIP << " in recv " << gwIface), "add firewall rule");
+          cmdFW(STR("nat " << fwNatNo << " config ip " << hostIP << " reset"));
+          cmdFW(STR("add " << fwRuleCommonNo << " nat " << fwNatNo << " all from any to " << hostIP << " in recv " << gwIface));
         }
         fwUsers->add(::getpid());
         fwUsers->unlock();
       }
       { // rules for this pipe: 1. whitewashes, 2. bans, 3. nats
         // always allow DNS requests
-        Util::runCommand(STR("ipfw -q add " << fwRuleOutNo << " nat " << fwNatNo << " udp from " << pipeIpB << " to " << nameserverIp << " 53 out xmit " << gwIface), "add firewall rule");
-        Util::runCommand(STR("ipfw -q add " << fwRuleOutNo << " allow udp from " << pipeIpB << " to " << nameserverIp << " 53"), "add firewall rule");
+        cmdFW(STR("add " << fwRuleOutNo << " nat " << fwNatNo << " udp from " << pipeIpB << " to " << nameserverIp << " 53 out xmit " << gwIface));
+        cmdFW(STR("add " << fwRuleOutNo << " allow udp from " << pipeIpB << " to " << nameserverIp << " 53"));
         // bans
         if (optionNet->banOutboundHost)
-          Util::runCommand(STR("ipfw -q add " << fwRuleOutNo << " deny ip from " << pipeIpB << " to me"), "add firewall rule");
+          cmdFW(STR("add " << fwRuleOutNo << " deny ip from " << pipeIpB << " to me"));
         if (optionNet->banOutboundLan)
-          Util::runCommand(STR("ipfw -q add " << fwRuleOutNo << " deny ip from " << pipeIpB << " to " << hostLAN), "add firewall rule");
+          cmdFW(STR("add " << fwRuleOutNo << " deny ip from " << pipeIpB << " to " << hostLAN));
         // nat the rest of the traffic
-        Util::runCommand(STR("ipfw -q add " << fwRuleOutNo << " nat " << fwNatNo << " all from " << pipeIpB << " to any out xmit " << gwIface), "add firewall rule");
+        cmdFW(STR("add " << fwRuleOutNo << " nat " << fwNatNo << " all from " << pipeIpB << " to any out xmit " << gwIface));
       }
       //
       destroyFiewallRulesAtEnd.reset([fwRuleOutNo, fwRuleCommonNo]() {
