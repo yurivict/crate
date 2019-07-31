@@ -261,7 +261,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
           strConfig << " redirect_port tcp " << epipeIpB << ":" << rangeToStr(rangePair.second) << " " << hostIP << ":" << rangeToStr(rangePair.first);
         for (auto &rangePair : optionNet->inboundPortsUdp)
           strConfig << " redirect_port udp " << epipeIpB << ":" << rangeToStr(rangePair.second) << " " << hostIP << ":" << rangeToStr(rangePair.first);
-        cmdFW(STR("nat " << fwNatInNo << " config" << strConfig.str() << " reset"));
+        cmdFW(STR("nat " << fwNatInNo << " config" << strConfig.str()));
         // create firewall rules: one per port range
         for (auto &rangePair : optionNet->inboundPortsTcp) {
           cmdFW(STR("add " << fwRuleInNo << " nat " << fwNatInNo << " tcp from any to " << hostIP  << " " << rangeToStr(rangePair.first) << " in recv " << gwIface));
@@ -277,7 +277,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
       if (optionNet->allowOutbound) {
         std::unique_ptr<Ctx::FwUsers> fwUsers(Ctx::FwUsers::lock());
         if (fwUsers->isEmpty()) {
-          cmdFW(STR("nat " << fwNatOutCommonNo << " config ip " << hostIP << " reset"));
+          cmdFW(STR("nat " << fwNatOutCommonNo << " config ip " << hostIP));
           cmdFW(STR("add " << fwRuleOutCommonNo << " nat " << fwNatOutCommonNo << " all from any to " << hostIP << " in recv " << gwIface));
         }
         fwUsers->add(::getpid());
