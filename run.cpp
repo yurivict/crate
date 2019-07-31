@@ -206,10 +206,10 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
     // set the lo0 IP address (lo0 is always automatically present in vnet jails)
     runCommandInJail(STR("ifconfig lo0 inet 127.0.0.1"), "set up the lo0 interface in jail");
     // create networking interface
-    //auto pipeIface = Net::createJailInterface(jailPath);
-    std::string pipeIfaceA = Util::stripTrailingSpace(Util::runCommandGetOutput("ifconfig epair create", "create the jail pipe"));
-    std::string pipeIfaceB = STR(pipeIfaceA.substr(0, pipeIfaceA.size()-1) << "b"); // jail side
-    unsigned epairNum = std::stoul(pipeIfaceA.substr(5/*skip epair*/, pipeIfaceA.size()-5-1));
+    //auto epipeIface = Net::createJailInterface(jailPath);
+    std::string epipeIfaceA = Util::stripTrailingSpace(Util::runCommandGetOutput("ifconfig epair create", "create the jail epipe"));
+    std::string epipeIfaceB = STR(epipeIfaceA.substr(0, epipeIfaceA.size()-1) << "b"); // jail side
+    unsigned epairNum = std::stoul(epipeIfaceA.substr(5/*skip epair*/, epipeIfaceA.size()-5-1));
     auto numToIp = [](unsigned epairNum, unsigned ipIdx2) {
       // XXX use 10.0.0.0/8 network for this purpose because number of containers can be large, and we need to have that many IP addresses available
       unsigned ip = 100 + 2*epairNum + ipIdx2; // 100 to avoid the addresses .0 and .1
@@ -220,12 +220,12 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
       unsigned ip3 = ip;
       return STR("10." << ip3 << "." << ip2 << "." << ip1);
     };
-    auto pipeIpA = numToIp(epairNum, 0), pipeIpB = numToIp(epairNum, 1);
+    auto epipeIpA = numToIp(epairNum, 0), epipeIpB = numToIp(epairNum, 1);
     // transfer the interface into jail
-    Util::runCommand(STR("ifconfig " << pipeIfaceB << " vnet " << jid), "transfer the network interface into jail");
-    // set the IP addresses on the jail pipe
-    runCommandInJail(STR("ifconfig " << pipeIfaceB << " inet " << pipeIpB << " netmask 0xfffffffe"), "set up IP jail pipe addresses");
-    Util::runCommand(STR("ifconfig " << pipeIfaceA << " inet " << pipeIpA << " netmask 0xfffffffe"), "set up IP jail pipe addresses");
+    Util::runCommand(STR("ifconfig " << epipeIfaceB << " vnet " << jid), "transfer the network interface into jail");
+    // set the IP addresses on the jail epipe
+    runCommandInJail(STR("ifconfig " << epipeIfaceB << " inet " << epipeIpB << " netmask 0xfffffffe"), "set up IP jail epipe addresses");
+    Util::runCommand(STR("ifconfig " << epipeIfaceA << " inet " << epipeIpA << " netmask 0xfffffffe"), "set up IP jail epipe addresses");
     // enable firewall in jail
     //if (optionInitializeRc)
       appendFileInJail(STR(
@@ -234,10 +234,10 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
         ),
         "/etc/rc.conf");
     // set default route in jail
-    runCommandInJailSilently(STR("route add default " << pipeIpA), "set default route in jail");
-    // destroy the pipe when finished
-    destroyPipeAtEnd.reset([pipeIfaceA]() {
-      Util::runCommand(STR("ifconfig " << pipeIfaceA << " destroy"), CSTR("destroy the jail pipe (" << pipeIfaceA << ")"));
+    runCommandInJailSilently(STR("route add default " << epipeIpA), "set default route in jail");
+    // destroy the epipe when finished
+    destroyPipeAtEnd.reset([epipeIfaceA]() {
+      Util::runCommand(STR("ifconfig " << epipeIfaceA << " destroy"), CSTR("destroy the jail epipe (" << epipeIfaceA << ")"));
     });
     // add firewall rules to NAT and route packets from jails to host's default GW
     {
@@ -250,7 +250,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
       auto fwRuleOutCommonNo = fwRuleBaseOut;
       auto fwRuleOutNo = fwRuleBaseOut + 1/*common rules*/ + epairNum/*per-crate rules*/;
 
-      // IN rules for this pipe
+      // IN rules for this epipe
       if (optionNet->allowInbound()) {
         // create the NAT instance
         auto rangeToStr = [](const Spec::NetOptDetails::PortRange &range) {
@@ -258,18 +258,18 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
         };
         std::ostringstream strConfig;
         for (auto &rangePair : optionNet->inboundPortsTcp)
-          strConfig << " redirect_port tcp " << pipeIpB << ":" << rangeToStr(rangePair.second) << " " << hostIP << ":" << rangeToStr(rangePair.first);
+          strConfig << " redirect_port tcp " << epipeIpB << ":" << rangeToStr(rangePair.second) << " " << hostIP << ":" << rangeToStr(rangePair.first);
         for (auto &rangePair : optionNet->inboundPortsUdp)
-          strConfig << " redirect_port udp " << pipeIpB << ":" << rangeToStr(rangePair.second) << " " << hostIP << ":" << rangeToStr(rangePair.first);
+          strConfig << " redirect_port udp " << epipeIpB << ":" << rangeToStr(rangePair.second) << " " << hostIP << ":" << rangeToStr(rangePair.first);
         cmdFW(STR("nat " << fwNatInNo << " config" << strConfig.str() << " reset"));
         // create firewall rules: one per port range
         for (auto &rangePair : optionNet->inboundPortsTcp) {
           cmdFW(STR("add " << fwRuleInNo << " nat " << fwNatInNo << " tcp from any to " << hostIP  << " " << rangeToStr(rangePair.first) << " in recv " << gwIface));
-          cmdFW(STR("add " << fwRuleInNo << " nat " << fwNatInNo << " tcp from " << pipeIpB << " " << rangeToStr(rangePair.second) << " to any out xmit " << gwIface));
+          cmdFW(STR("add " << fwRuleInNo << " nat " << fwNatInNo << " tcp from " << epipeIpB << " " << rangeToStr(rangePair.second) << " to any out xmit " << gwIface));
         }
         for (auto &rangePair : optionNet->inboundPortsUdp) {
           cmdFW(STR("add " << fwRuleInNo << " nat " << fwNatInNo << " udp from any to " << hostIP  << " " << rangeToStr(rangePair.first) << " in recv " << gwIface));
-          cmdFW(STR("add " << fwRuleInNo << " nat " << fwNatInNo << " udp from " << pipeIpB << " " << rangeToStr(rangePair.second) << " to any out xmit " << gwIface));
+          cmdFW(STR("add " << fwRuleInNo << " nat " << fwNatInNo << " udp from " << epipeIpB << " " << rangeToStr(rangePair.second) << " to any out xmit " << gwIface));
         }
       }
 
@@ -284,22 +284,22 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
         fwUsers->unlock();
       }
 
-      // OUT per-pipe rules: 1. whitewashes, 2. bans, 3. nats
+      // OUT per-epipe rules: 1. whitewashes, 2. bans, 3. nats
       if (optionNet->allowOutbound) {
         // always allow DNS requests
-        cmdFW(STR("add " << fwRuleOutNo << " nat " << fwNatOutCommonNo << " udp from " << pipeIpB << " to " << nameserverIp << " 53 out xmit " << gwIface));
-        cmdFW(STR("add " << fwRuleOutNo << " allow udp from " << pipeIpB << " to " << nameserverIp << " 53"));
+        cmdFW(STR("add " << fwRuleOutNo << " nat " << fwNatOutCommonNo << " udp from " << epipeIpB << " to " << nameserverIp << " 53 out xmit " << gwIface));
+        cmdFW(STR("add " << fwRuleOutNo << " allow udp from " << epipeIpB << " to " << nameserverIp << " 53"));
         // bans
         if (optionNet->banOutboundHost)
-          cmdFW(STR("add " << fwRuleOutNo << " deny ip from " << pipeIpB << " to me"));
+          cmdFW(STR("add " << fwRuleOutNo << " deny ip from " << epipeIpB << " to me"));
         if (optionNet->banOutboundLan)
-          cmdFW(STR("add " << fwRuleOutNo << " deny ip from " << pipeIpB << " to " << hostLAN));
+          cmdFW(STR("add " << fwRuleOutNo << " deny ip from " << epipeIpB << " to " << hostLAN));
         // nat the rest of the traffic
-        cmdFW(STR("add " << fwRuleOutNo << " nat " << fwNatOutCommonNo << " all from " << pipeIpB << " to any out xmit " << gwIface));
+        cmdFW(STR("add " << fwRuleOutNo << " nat " << fwNatOutCommonNo << " all from " << epipeIpB << " to any out xmit " << gwIface));
       }
       // destroy rules
       destroyFiewallRulesAtEnd.reset([fwRuleInNo, fwRuleOutNo, fwRuleOutCommonNo, optionNet]() {
-        // delete the rule(s) for this pipe
+        // delete the rule(s) for this epipe
         if (optionNet->allowInbound())
           Util::runCommand(STR("ipfw delete " << fwRuleInNo), CSTR("destroy firewall rule"));
         if (optionNet->allowOutbound) {
