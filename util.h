@@ -100,6 +100,7 @@ int getSysctlInt(const char *name);
 std::string gethostname();
 std::vector<std::string> splitString(const std::string &str, const std::string &delimiter);
 std::string stripTrailingSpace(const std::string &str);
+unsigned toUInt(const std::string &str);
 
 namespace Fs {
 

@@ -17,7 +17,10 @@ public:
     bool allowOutbound;                  // allow outbound connections
     bool banOutboundHost;                // ban outbound to the host
     bool banOutboundLan;                 // ban outbound to LAN hosts
-    std::vector<std::pair<PortRange, PortRange>> inboundPorts;
+    std::vector<std::pair<PortRange, PortRange>> inboundPortsTcp;
+    std::vector<std::pair<PortRange, PortRange>> inboundPortsUdp;
+
+    bool allowInbound() const;
   };
   std::vector<std::string>                           baseKeep;
   std::vector<std::string>                           baseRemove;

@@ -54,7 +54,8 @@ static const char* user = ::getenv("USER");
 
 // options
 static bool optionInitializeRc = false; // this pulls a lot of dependencies, and starts a lot of things that we don't need in crate
-static unsigned fwRuleBase = 59000; // ipfw rule number base
+static unsigned fwRuleBaseIn = 19000;  // ipfw rule number base for in rules: in rules should be before out rules because of rule conflicts
+static unsigned fwRuleBaseOut = 59000; // ipfw rule number base TODO Need to investigate how to eliminate rule conflicts.
 
 // hosts's default gateway network parameters
 static std::string gwIface;
@@ -179,7 +180,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   RunAtEnd destroyPipeAtEnd;
   RunAtEnd destroyFiewallRulesAtEnd;
   auto optionNet = spec.optionNet();
-  if (optionNet && optionNet->allowOutbound) {
+  if (optionNet && (optionNet->allowOutbound || optionNet->allowInbound())) {
     { // determine host's gateway interface
       auto elts = Util::splitString(
                     Util::runCommandGetOutput("netstat -rn | grep ^default | sed 's| *| |'", "determine host's gateway interface"),
@@ -239,26 +240,54 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
       Util::runCommand(STR("ifconfig " << pipeIfaceA << " destroy"), CSTR("destroy the jail pipe (" << pipeIfaceA << ")"));
     });
     // add firewall rules to NAT and route packets from jails to host's default GW
-    if (true) {
+    {
       auto cmdFW = [](const std::string &cmd) {
         Util::runCommand(STR("ipfw -q " << cmd), "add firewall rule");
       };
-      auto fwNatNo = fwRuleBase;
-      //auto fwRuleInNo  = fwRuleBase + 1/*common rules*/ + epairNum*2/*per-crate rules*/ + 0; // "in" rules go first
-      auto fwRuleCommonNo = fwRuleBase;
-      auto fwRuleOutNo = fwRuleBase + 1/*common rules*/ + epairNum*2/*per-crate rules*/ + 1;
-      { // single rules
+      auto fwRuleInNo  = fwRuleBaseIn + 1/*common rules*/ + epairNum/*per-crate rules*/;
+      auto fwNatInNo = fwRuleInNo;
+      auto fwNatOutCommonNo = fwRuleBaseOut;
+      auto fwRuleOutCommonNo = fwRuleBaseOut;
+      auto fwRuleOutNo = fwRuleBaseOut + 1/*common rules*/ + epairNum/*per-crate rules*/;
+
+      // IN rules for this pipe
+      if (optionNet->allowInbound()) {
+        // create the NAT instance
+        auto rangeToStr = [](const Spec::NetOptDetails::PortRange &range) {
+          return range.first == range.second ? STR(range.first) : STR(range.first << "-" << range.second);
+        };
+        std::ostringstream strConfig;
+        for (auto &rangePair : optionNet->inboundPortsTcp)
+          strConfig << " redirect_port tcp " << pipeIpB << ":" << rangeToStr(rangePair.second) << " " << hostIP << ":" << rangeToStr(rangePair.first);
+        for (auto &rangePair : optionNet->inboundPortsUdp)
+          strConfig << " redirect_port udp " << pipeIpB << ":" << rangeToStr(rangePair.second) << " " << hostIP << ":" << rangeToStr(rangePair.first);
+        cmdFW(STR("nat " << fwNatInNo << " config" << strConfig.str() << " reset"));
+        // create firewall rules: one per port range
+        for (auto &rangePair : optionNet->inboundPortsTcp) {
+          cmdFW(STR("add " << fwRuleInNo << " nat " << fwNatInNo << " tcp from any to " << hostIP  << " " << rangeToStr(rangePair.first) << " in recv " << gwIface));
+          cmdFW(STR("add " << fwRuleInNo << " nat " << fwNatInNo << " tcp from " << pipeIpB << " " << rangeToStr(rangePair.second) << " to any out xmit " << gwIface));
+        }
+        for (auto &rangePair : optionNet->inboundPortsUdp) {
+          cmdFW(STR("add " << fwRuleInNo << " nat " << fwNatInNo << " udp from any to " << hostIP  << " " << rangeToStr(rangePair.first) << " in recv " << gwIface));
+          cmdFW(STR("add " << fwRuleInNo << " nat " << fwNatInNo << " udp from " << pipeIpB << " " << rangeToStr(rangePair.second) << " to any out xmit " << gwIface));
+        }
+      }
+
+      // OUT common rules
+      if (optionNet->allowOutbound) {
         std::unique_ptr<Ctx::FwUsers> fwUsers(Ctx::FwUsers::lock());
         if (fwUsers->isEmpty()) {
-          cmdFW(STR("nat " << fwNatNo << " config ip " << hostIP << " reset"));
-          cmdFW(STR("add " << fwRuleCommonNo << " nat " << fwNatNo << " all from any to " << hostIP << " in recv " << gwIface));
+          cmdFW(STR("nat " << fwNatOutCommonNo << " config ip " << hostIP << " reset"));
+          cmdFW(STR("add " << fwRuleOutCommonNo << " nat " << fwNatOutCommonNo << " all from any to " << hostIP << " in recv " << gwIface));
         }
         fwUsers->add(::getpid());
         fwUsers->unlock();
       }
-      { // rules for this pipe: 1. whitewashes, 2. bans, 3. nats
+
+      // OUT per-pipe rules: 1. whitewashes, 2. bans, 3. nats
+      if (optionNet->allowOutbound) {
         // always allow DNS requests
-        cmdFW(STR("add " << fwRuleOutNo << " nat " << fwNatNo << " udp from " << pipeIpB << " to " << nameserverIp << " 53 out xmit " << gwIface));
+        cmdFW(STR("add " << fwRuleOutNo << " nat " << fwNatOutCommonNo << " udp from " << pipeIpB << " to " << nameserverIp << " 53 out xmit " << gwIface));
         cmdFW(STR("add " << fwRuleOutNo << " allow udp from " << pipeIpB << " to " << nameserverIp << " 53"));
         // bans
         if (optionNet->banOutboundHost)
@@ -266,18 +295,22 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
         if (optionNet->banOutboundLan)
           cmdFW(STR("add " << fwRuleOutNo << " deny ip from " << pipeIpB << " to " << hostLAN));
         // nat the rest of the traffic
-        cmdFW(STR("add " << fwRuleOutNo << " nat " << fwNatNo << " all from " << pipeIpB << " to any out xmit " << gwIface));
+        cmdFW(STR("add " << fwRuleOutNo << " nat " << fwNatOutCommonNo << " all from " << pipeIpB << " to any out xmit " << gwIface));
       }
-      //
-      destroyFiewallRulesAtEnd.reset([fwRuleOutNo, fwRuleCommonNo]() {
+      // destroy rules
+      destroyFiewallRulesAtEnd.reset([fwRuleInNo, fwRuleOutNo, fwRuleOutCommonNo, optionNet]() {
         // delete the rule(s) for this pipe
-        Util::runCommand(STR("ipfw delete " << fwRuleOutNo), CSTR("destroy firewall rule"));
-        { // possibly delete the common rules if this is the last firewall
-          std::unique_ptr<Ctx::FwUsers> fwUsers(Ctx::FwUsers::lock());
-          fwUsers->del(::getpid());
-          if (fwUsers->isEmpty())
-            Util::runCommand(STR("ipfw delete " << fwRuleCommonNo), CSTR("destroy firewall rule"));
-          fwUsers->unlock();
+        if (optionNet->allowInbound())
+          Util::runCommand(STR("ipfw delete " << fwRuleInNo), CSTR("destroy firewall rule"));
+        if (optionNet->allowOutbound) {
+          Util::runCommand(STR("ipfw delete " << fwRuleOutNo), CSTR("destroy firewall rule"));
+          { // possibly delete the common rules if this is the last firewall
+            std::unique_ptr<Ctx::FwUsers> fwUsers(Ctx::FwUsers::lock());
+            fwUsers->del(::getpid());
+            if (fwUsers->isEmpty())
+              Util::runCommand(STR("ipfw delete " << fwRuleOutCommonNo), CSTR("destroy firewall rule"));
+            fwUsers->unlock();
+          }
         }
       });
     }

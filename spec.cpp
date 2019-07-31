@@ -37,6 +37,10 @@ static void Add(std::vector<std::string> &container, const std::string &val) {
 static void Add(std::map<std::string, std::shared_ptr<Spec::OptDetails>> &container, const std::string &val) {
   (void)container[val];
 }
+static void Add(std::vector<std::pair<Spec::NetOptDetails::PortRange, Spec::NetOptDetails::PortRange>> &container, const std::string &val) {
+  auto vali = Util::toUInt(val);
+  container.push_back({{vali, vali}, {vali, vali}});
+}
 
 static std::map<std::string, std::string> parseScriptsSection(const std::string &section, const YAML::Node &node) {
   auto isSequenceOfScalars = [](const YAML::Node &node) {
@@ -112,6 +116,14 @@ static std::map<std::string, std::string> parseScriptsSection(const std::string 
   }
 }
 
+static Spec::NetOptDetails::PortRange parsePortRange(const std::string &str) {
+  auto hyphen = str.find('-');
+  return hyphen == std::string::npos ?
+    Spec::NetOptDetails::PortRange(Util::toUInt(str), Util::toUInt(str))
+    :
+    Spec::NetOptDetails::PortRange(Util::toUInt(str.substr(0, hyphen)), Util::toUInt(str.substr(hyphen + 1)));
+}
+
 //
 // methods
 //
@@ -129,6 +141,10 @@ Spec::NetOptDetails* Spec::NetOptDetails::createDefault() {
   auto d = new NetOptDetails;
   d->allowOutbound = true; // all outbound is allowed by default
   return d;
+}
+
+bool Spec::NetOptDetails::allowInbound() const {
+  return !inboundPortsTcp.empty() || !inboundPortsUdp.empty();
 }
 
 bool Spec::optionExists(const char* opt) const {
@@ -213,6 +229,16 @@ void Spec::validate() const {
   for (auto &s : scripts)
     if (s.first.empty() || allScriptSections.find(s.first) == allScriptSections.end())
       ERR("the unknown script section '" << s.first << "' was supplied")
+
+  // port ranges in net options should be consistent
+  if (auto optNet = optionNet())
+    for (auto pv : {&optNet->inboundPortsTcp, &optNet->inboundPortsUdp})
+      for (auto &rangePair : *pv)
+        if (rangePair.first.second - rangePair.first.first != rangePair.second.second - rangePair.second.first)
+          ERR("port ranges have different spans:"
+            << rangePair.first.first << "-" << rangePair.first.second
+            << " and "
+            << rangePair.second.first << "-" << rangePair.second.second)
 }
 
 //
@@ -340,7 +366,23 @@ Spec parseSpec(const std::string &fname) {
                   optNetDetails->banOutboundHost = netOpt.second.as<bool>();
                 else if (AsString(netOpt.first) == "ban-outbound-lan")
                   optNetDetails->banOutboundLan = netOpt.second.as<bool>();
-                else
+                else if (AsString(netOpt.first) == "inbound-tcp") {
+                  if (listOrScalar(netOpt.second, optNetDetails->inboundPortsTcp, "options")) {
+                  } else if (netOpt.second.IsMap()) {
+                    for (auto portsPair : netOpt.second)
+                      optNetDetails->inboundPortsTcp.push_back({parsePortRange(portsPair.first.as<std::string>()), parsePortRange(portsPair.second.as<std::string>())});
+                  } else {
+                    ERR("options/net/inbound-tcp value should be an array, a scalar or a map")
+                  }
+                } else if (AsString(netOpt.first) == "inbound-udp") {
+                  if (listOrScalar(netOpt.second, optNetDetails->inboundPortsUdp, "options")) {
+                  } else if (netOpt.second.IsMap()) {
+                    for (auto portsPair : netOpt.second)
+                      optNetDetails->inboundPortsUdp.push_back({parsePortRange(portsPair.first.as<std::string>()), parsePortRange(portsPair.second.as<std::string>())});
+                  } else {
+                    ERR("options/net/inbound-udp value should be an array, a scalar or a map")
+                  }
+                } else
                   ERR("an invalid value options/net/" << netOpt.first << " supplied")
               }
             } else {

@@ -147,6 +147,14 @@ std::string stripTrailingSpace(const std::string &str) {
   return str.substr(0, sz);
 }
 
+unsigned toUInt(const std::string &str) {
+  std::size_t pos;
+  auto u = std::stoul(str, &pos);
+  if (pos != str.size())
+    ERR2("convert string to unsigned", "trailing characters in string '" << str << "'")
+  return u;
+}
+
 namespace Fs {
 
 namespace fs = std::filesystem;
