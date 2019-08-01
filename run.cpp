@@ -378,13 +378,15 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
 
   // share directories if requested
   for (auto &dirShare : spec.dirsShare) {
+    auto const &dirJail = dirShare.first;
+    auto const &dirHost = dirShare.second;
     // does the host directory exist?
-    if (!Util::Fs::dirExists(dirShare.first))
-      ERR("shared directory '" << dirShare.first << "' doesn't exist, can't run the app")
+    if (!Util::Fs::dirExists(dirHost)) // dir
+      ERR("shared directory '" << dirHost << "' doesn't exist on the host, can't run the app")
     // create the directory in jail
-    Util::runCommand(STR("mkdir -p " << J(dirShare.second)), "create the shared directory in jail"); // TODO replace with API-based calls
+    Util::runCommand(STR("mkdir -p " << J(dirJail)), "create the shared directory in jail"); // TODO replace with API-based calls
     // mount it as nullfs
-    mount(new Mount("nullfs", J(dirShare.second), dirShare.first));
+    mount(new Mount("nullfs", J(dirJail), dirHost));
   }
 
   // start services, if any
