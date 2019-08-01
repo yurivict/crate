@@ -1,0 +1,29 @@
+---
+
+base:
+    keep:
+        - /usr/bin/su
+
+pkg:
+    install:
+        - gogs
+
+run:
+    service: gogs
+
+dirs:
+    share:
+        -
+            - /var/db/gogs
+            - $HOME/gogs/db
+        -
+            - /var/log/gogs
+            - $HOME/gogs/log
+
+options:
+    net:
+        allow-outbound: true
+        ban-outbound-host: true
+        ban-outbound-lan: true
+        inbound-tcp:  # gogs crate listens on the port 3100 forwarded to 3000
+            3100: 3000
