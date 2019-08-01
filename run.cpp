@@ -379,7 +379,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   // share directories if requested
   for (auto &dirShare : spec.dirsShare) {
     auto const &dirJail = dirShare.first;
-    auto const &dirHost = dirShare.second;
+    const std::string dirHost = Util::pathSubstituteVars(dirShare.second);
     // does the host directory exist?
     if (!Util::Fs::dirExists(dirHost)) // dir
       ERR("shared directory '" << dirHost << "' doesn't exist on the host, can't run the app")

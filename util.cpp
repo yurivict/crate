@@ -24,9 +24,12 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/sysctl.h>
+#include <pwd.h>
 
 
 #define SYSCALL(res, syscall, arg) Util::ckSyscallError(res, syscall, arg)
+
+static uid_t myuid = ::getuid();
 
 // consts
 static const char sepFilePath = '/';
@@ -153,6 +156,13 @@ unsigned toUInt(const std::string &str) {
   if (pos != str.size())
     ERR2("convert string to unsigned", "trailing characters in string '" << str << "'")
   return u;
+}
+
+std::string pathSubstituteVars(const std::string &path) {
+  if (path.size() > 5 && path.substr(0, 5) == "$HOME")
+    return STR(::getpwuid(myuid)->pw_dir << path.substr(5));
+
+  return path;
 }
 
 namespace Fs {
