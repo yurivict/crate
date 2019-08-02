@@ -245,6 +245,10 @@ void chown(const std::string &path, uid_t owner, gid_t group) {
   SYSCALL(::chown(path.c_str(), owner, group), "chown", path.c_str());
 }
 
+void link(const std::string &name1, const std::string &name2) {
+  SYSCALL(::link(name1.c_str(), name2.c_str()), "link", name1.c_str());
+}
+
 void unlink(const std::string &file) {
   auto res = ::unlink(file.c_str());
   if (res == -1 && errno == EPERM) { // this unlink function clears the schg extended flag in case of EPERM, because in our context EPERM often indicates schg

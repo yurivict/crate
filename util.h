@@ -114,6 +114,7 @@ void writeFile(const std::string &data, const std::string &file);
 void appendFile(const std::string &data, const std::string &file);
 void chmod(const std::string &path, mode_t mode);
 void chown(const std::string &path, uid_t owner, gid_t group);
+void link(const std::string &name1, const std::string &name2);
 void unlink(const std::string &file);
 void mkdir(const std::string &dir, mode_t mode);
 void rmdir(const std::string &dir);
