@@ -34,6 +34,9 @@ static std::string AsString(const YAML::Node &node) {
 static void Add(std::vector<std::string> &container, const std::string &val) {
   container.push_back(val);
 }
+static void Add(std::set<std::string> &container, const std::string &val) {
+  container.insert(val);
+}
 static void Add(std::map<std::string, std::shared_ptr<Spec::OptDetails>> &container, const std::string &val) {
   (void)container[val];
 }
@@ -132,15 +135,21 @@ Spec::OptDetails::~OptDetails() {
 }
 
 Spec::NetOptDetails::NetOptDetails() // default "net" options allow all outbound and no inbound
-: allowOutbound(false),
-  banOutboundHost(false),
-  banOutboundLan(false)
+: outboundWan(false),
+  outboundLan(false),
+  outboundHost(false)
 { }
 
 Spec::NetOptDetails* Spec::NetOptDetails::createDefault() {
   auto d = new NetOptDetails;
-  d->allowOutbound = true; // all outbound is allowed by default
+  d->outboundWan = true; // all outbound is allowed by default
+  d->outboundLan = true;
+  d->outboundHost = true;
   return d;
+}
+
+bool Spec::NetOptDetails::allowOutbound() const {
+  return outboundWan || outboundLan || outboundHost;
 }
 
 bool Spec::NetOptDetails::allowInbound() const {
@@ -257,7 +266,7 @@ Spec parseSpec(const std::string &fname) {
     if (node.IsScalar()) {
       out = AsString(node);
     } else {
-      ERR("unsupported " << opath << " object type " << node.Type())
+      ERR("unsupported " << opath << " object of type " << node.Type() << ", only scalar is allowed")
     }
   };
   auto listOrScalar = [](auto &node, auto &out, const char *opath) {
@@ -275,7 +284,7 @@ Spec parseSpec(const std::string &fname) {
   };
   auto listOrScalarOnly = [listOrScalar](auto &node, auto &out, const char *opath) {
     if (!listOrScalar(node, out, opath))
-      ERR("unsupported " << opath << " object type " << node.Type())
+      ERR("unsupported " << opath << " object of type " << node.Type() << ", only list or scalar are allowed")
   };
 
   // parse the spec in the yaml format
@@ -360,13 +369,29 @@ Spec parseSpec(const std::string &fname) {
               optVal.reset(new Spec::NetOptDetails); // blank "net" option details
               auto optNetDetails = static_cast<Spec::NetOptDetails*>(optVal.get());
               for (auto netOpt : lo.second) {
-                if (AsString(netOpt.first) == "allow-outbound")
-                  optNetDetails->allowOutbound = netOpt.second.as<bool>();
-                else if (AsString(netOpt.first) == "ban-outbound-host")
-                  optNetDetails->banOutboundHost = netOpt.second.as<bool>();
-                else if (AsString(netOpt.first) == "ban-outbound-lan")
-                  optNetDetails->banOutboundLan = netOpt.second.as<bool>();
-                else if (AsString(netOpt.first) == "inbound-tcp") {
+                if (AsString(netOpt.first) == "outbound") {
+                  std::set<std::string> outboundSet;
+                  listOrScalarOnly(netOpt.second, outboundSet, "net/outbound");
+                  for (auto &v : outboundSet)
+                    if (v == "all") {
+                      if (outboundSet.size() > 1)
+                        ERR("net/outbound contains other elements besides 'all'")
+                      optNetDetails->outboundWan = true;
+                      optNetDetails->outboundLan = true;
+                      optNetDetails->outboundHost = true;
+                    } else if (v == "none") {
+                      if (outboundSet.size() > 1)
+                        ERR("net/outbound contains other elements besides 'none'")
+                    } else if (v == "wan") {
+                      optNetDetails->outboundWan = true;
+                    } else if (v == "lan") {
+                      optNetDetails->outboundLan = true;
+                    } else if (v == "host") {
+                      optNetDetails->outboundHost = true;
+                    } else {
+                      ERR("net/outbound contains the unknown element '" << v << "'")
+                    }
+                } else if (AsString(netOpt.first) == "inbound-tcp") {
                   if (listOrScalar(netOpt.second, optNetDetails->inboundPortsTcp, "options")) {
                   } else if (netOpt.second.IsMap()) {
                     for (auto portsPair : netOpt.second)

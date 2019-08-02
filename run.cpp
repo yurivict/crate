@@ -180,7 +180,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   RunAtEnd destroyPipeAtEnd;
   RunAtEnd destroyFiewallRulesAtEnd;
   auto optionNet = spec.optionNet();
-  if (optionNet && (optionNet->allowOutbound || optionNet->allowInbound())) {
+  if (optionNet && (optionNet->allowOutbound() || optionNet->allowInbound())) {
     { // determine host's gateway interface
       auto elts = Util::splitString(
                     Util::runCommandGetOutput("netstat -rn | grep ^default | sed 's| *| |'", "determine host's gateway interface"),
@@ -274,7 +274,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
       }
 
       // OUT common rules
-      if (optionNet->allowOutbound) {
+      if (optionNet->allowOutbound()) {
         std::unique_ptr<Ctx::FwUsers> fwUsers(Ctx::FwUsers::lock());
         if (fwUsers->isEmpty()) {
           cmdFW(STR("nat " << fwNatOutCommonNo << " config ip " << hostIP));
@@ -285,14 +285,14 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
       }
 
       // OUT per-epipe rules: 1. whitewashes, 2. bans, 3. nats
-      if (optionNet->allowOutbound) {
+      if (optionNet->allowOutbound()) {
         // always allow DNS requests
         cmdFW(STR("add " << fwRuleOutNo << " nat " << fwNatOutCommonNo << " udp from " << epipeIpB << " to " << nameserverIp << " 53 out xmit " << gwIface));
         cmdFW(STR("add " << fwRuleOutNo << " allow udp from " << epipeIpB << " to " << nameserverIp << " 53"));
         // bans
-        if (optionNet->banOutboundHost)
+        if (!optionNet->outboundHost)
           cmdFW(STR("add " << fwRuleOutNo << " deny ip from " << epipeIpB << " to me"));
-        if (optionNet->banOutboundLan)
+        if (!optionNet->outboundLan)
           cmdFW(STR("add " << fwRuleOutNo << " deny ip from " << epipeIpB << " to " << hostLAN));
         // nat the rest of the traffic
         cmdFW(STR("add " << fwRuleOutNo << " nat " << fwNatOutCommonNo << " all from " << epipeIpB << " to any out xmit " << gwIface));
@@ -302,7 +302,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
         // delete the rule(s) for this epipe
         if (optionNet->allowInbound())
           Util::runCommand(STR("ipfw delete " << fwRuleInNo), CSTR("destroy firewall rule"));
-        if (optionNet->allowOutbound) {
+        if (optionNet->allowOutbound()) {
           Util::runCommand(STR("ipfw delete " << fwRuleOutNo), CSTR("destroy firewall rule"));
           { // possibly delete the common rules if this is the last firewall
             std::unique_ptr<Ctx::FwUsers> fwUsers(Ctx::FwUsers::lock());
@@ -381,7 +381,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
     auto const &dirJail = dirShare.first;
     const std::string dirHost = Util::pathSubstituteVars(dirShare.second);
     // does the host directory exist?
-    if (!Util::Fs::dirExists(dirHost)) // dir
+    if (!Util::Fs::dirExists(dirHost))
       ERR("shared directory '" << dirHost << "' doesn't exist on the host, can't run the app")
     // create the directory in jail
     Util::runCommand(STR("mkdir -p " << J(dirJail)), "create the shared directory in jail"); // TODO replace with API-based calls

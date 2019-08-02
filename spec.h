@@ -14,12 +14,13 @@ public:
     NetOptDetails();
     static NetOptDetails* createDefault();
     typedef std::pair<unsigned,unsigned> PortRange;
-    bool allowOutbound;                  // allow outbound connections
-    bool banOutboundHost;                // ban outbound to the host
-    bool banOutboundLan;                 // ban outbound to LAN hosts
+    bool outboundWan;                 // allow outbound connections to WAN
+    bool outboundLan;                 // allow outbound connections to LAN
+    bool outboundHost;                // allow outbound connections to the host
     std::vector<std::pair<PortRange, PortRange>> inboundPortsTcp;
     std::vector<std::pair<PortRange, PortRange>> inboundPortsUdp;
 
+    bool allowOutbound() const;
     bool allowInbound() const;
   };
   std::vector<std::string>                           baseKeep;

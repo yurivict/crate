@@ -22,8 +22,6 @@ dirs:
 
 options:
     net:
-        allow-outbound: true
-        ban-outbound-host: true
-        ban-outbound-lan: true
+        outbound: wan
         inbound-tcp:  # gogs crate listens on the port 3100 forwarded to 3000
             3100: 3000
