@@ -20,6 +20,12 @@ dirs:
             - /var/log/gogs
             - $HOME/gogs/log
 
+files:
+    share:
+        -
+            - /usr/local/etc/gogs/conf/app.ini
+            - $HOME/gogs/app.ini
+
 options:
     net:
         outbound: wan
