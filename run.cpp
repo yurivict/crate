@@ -389,6 +389,25 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
     mount(new Mount("nullfs", J(dirJail), dirHost));
   }
 
+  // share files if requested
+  for (auto &fileShare : spec.filesShare) {
+    auto const &fileJail = fileShare.first;
+    const std::string fileHost = Util::pathSubstituteVars(fileShare.second);
+    // do files exist?
+    bool fileHostExists = Util::Fs::fileExists(fileHost);
+    bool fileJailExists = Util::Fs::fileExists(J(fileJail));
+    if (!fileHostExists && !fileJailExists) {
+      ERR("none of the files in a file-share exists: fileHost=" << fileHost << " fileJail=" << fileJail) // alternatively, we can create an empty file (?)
+    } else if (fileHostExists && fileJailExists) {
+      Util::Fs::unlink(J(fileJail));
+      Util::Fs::link(fileHost, J(fileJail));
+    } else if (fileHostExists) { // fileHost exists, but fileJail doesn't
+      Util::Fs::link(fileHost, J(fileJail));
+    } else { // fileJail exists, but fileHost doesn't
+      Util::Fs::link(J(fileJail), fileHost);
+    }
+  }
+
   // start services, if any
   runScript("run:before-start-services");
   if (!spec.runServices.empty())

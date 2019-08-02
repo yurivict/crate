@@ -229,6 +229,11 @@ void Spec::validate() const {
     if (!isFullPath(dirShare.first) || !isFullPath(Util::pathSubstituteVars(dirShare.second)))
       ERR("the shared directory paths have to be a full paths, share=" << dirShare.first << "->" << dirShare.second)
 
+  // shared files must be full paths
+  for (auto &fileShare : filesShare)
+    if (!isFullPath(fileShare.first) || !isFullPath(Util::pathSubstituteVars(fileShare.second)))
+      ERR("the shared directory paths have to be a full paths, share=" << fileShare.first << "->" << fileShare.second)
+
   // options must be from the supported set
   for (auto &o : options)
     if (allOptions.find(o.first) == allOptions.end())
@@ -349,6 +354,22 @@ Spec parseSpec(const std::string &fname) {
           }
         } else {
           ERR("unknown element dirs/" << b.first << " in spec")
+        }
+      }
+    } else if (isKey(k, "files")) {
+      for (auto b : k.second) {
+        if (isKey(b, "share")) {
+          if (b.second.IsSequence()) {
+            for (auto oneShare : b.second) {
+              if (oneShare.IsScalar())
+                spec.filesShare.push_back({AsString(oneShare), AsString(oneShare)});
+              else if (oneShare.IsSequence() && oneShare.size() == 2) {
+                spec.filesShare.push_back({AsString(oneShare[0]), AsString(oneShare[1])});
+              } else {
+                ERR("elements of the files/share list have to be scalars or lists of size two (fromFile, toFile)")
+              }
+            }
+          }
         }
       }
     } else if (isKey(k, "options")) {

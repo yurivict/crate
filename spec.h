@@ -35,6 +35,7 @@ public:
   std::vector<std::string>                           runServices;             // 0..oo services can be run
 
   std::vector<std::pair<std::string, std::string>>   dirsShare;               // any number of directories can be shared, {from -> to} mappings are elements
+  std::vector<std::pair<std::string, std::string>>   filesShare;              // any number of files can be shared, {from -> to} mappings are elements
 
   std::map<std::string, std::shared_ptr<OptDetails>> options;                 // various options that this spec uses
 
