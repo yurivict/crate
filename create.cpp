@@ -283,6 +283,12 @@ bool createCrate(const Args &args, const Spec &spec) {
     });
   };
 
+  RunAtEnd destroyJailDir([&jailPath,&args]() {
+    // remove the (future) jail directory
+    LOG("removing the the jail directory")
+    Util::Fs::rmdirHier(jailPath);
+  });
+
   // unpack the base archive
   LOG("unpacking the base archive")
   Util::runCommand(STR("cat " << Locations::baseArchive
@@ -337,8 +343,7 @@ bool createCrate(const Args &args, const Spec &spec) {
   Util::Fs::chown(crateFileName, myuid, mygid);
 
   // remove the create directory
-  LOG("removing the the jail directory")
-  Util::Fs::rmdirHier(jailPath);
+  destroyJailDir.doNow();
 
   // finished
   std::cout << "the crate file '" << crateFileName << "' has been created" << std::endl;
