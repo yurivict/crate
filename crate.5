@@ -1,0 +1,56 @@
+.\" Copyright (c) 2019
+.\"     Yuri Victorovich.  All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\" 3. Neither the name of the University nor the names of its contributors
+.\"    may be used to endorse or promote products derived from this software
+.\"    without specific prior written permission.
+.\"
+.\"
+.Dd August 3, 2019
+.Dt CRATE 1
+.Os
+.Sh NAME
+.Nm crate
+.Nd containerizer for FreeBSD
+.Sh SYNOPSIS
+.Nm
+.Ar crate-specification.yml
+.Oc
+.Nm
+.Ar crate-file.crate
+.Oc
+.Sh DESCRIPTION
+The
+.Nm
+utility is a containerizer program that is able to create containers from
+container definition files, and then run containers as processes that have no
+dependencies besides system functions in the kernel.
+
+.Ss Invocation
+There are two basic operations that
+.Nm
+supports:
+.Ic create
+and
+.Ic run .
+When
+.Nm
+is invoked with the crate definition file (having the .yml extension), this
+triggers the
+.Ic create
+mode. When
+.Nm
+is invoked with the crate file (having the .create extension), this triggers
+the
+.Ic run
+mode.
+
+
