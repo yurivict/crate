@@ -1,7 +1,6 @@
 
 SRCS=   main.cpp args.cpp spec.cpp create.cpp run.cpp locs.cpp cmd.cpp mount.cpp net.cpp ctx.cpp scripts.cpp misc.cpp util.cpp err.cpp
 OBJS=   $(SRCS:.cpp=.o)
-MANS=   crate.5
 
 PREFIX   ?=  /usr/local
 CXXFLAGS +=  `pkg-config --cflags yaml-cpp`
