@@ -32,14 +32,6 @@
   }())
 #define CSTR(msg...) (STR(msg).c_str())
 
-#define ERR2(loc, msg...) \
-  { \
-    std::cerr << rang::fg::red << loc << ": " << msg << rang::style::reset << std::endl; \
-    exit(1); \
-  }
-
-#define WARN(msg...) \
-  std::cerr << rang::fg::yellow << msg << rang::style::reset << std::endl;
 
 template<typename T>
 inline std::ostream& operator<<(std::ostream &os, const std::vector<T> &v) {
@@ -69,19 +61,17 @@ public:
 class OnDestroy {
   std::function<void()> fnAction;
 public:
-  OnDestroy(const std::function<void()> &newFnAction) : fnAction(newFnAction) { }
-  ~OnDestroy() {
-    fnAction();
-  }
+  OnDestroy(const std::function<void()> &newFnAction);
+  ~OnDestroy();
+  void doNow();
 };
 
 class RunAtEnd : public std::unique_ptr<OnDestroy> {
 public:
-  RunAtEnd() { }
-  RunAtEnd(const std::function<void()> &newFnAction) : std::unique_ptr<OnDestroy>(new OnDestroy(newFnAction)) { }
-  void reset(const std::function<void()> &newFnAction) {
-    std::unique_ptr<OnDestroy>::reset(new OnDestroy(newFnAction));
-  }
+  RunAtEnd();
+  RunAtEnd(const std::function<void()> &newFnAction);
+  void reset(const std::function<void()> &newFnAction);
+  void doNow();
 };
 
 //

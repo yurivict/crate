@@ -1,5 +1,6 @@
 #include "misc.h"
 #include "util.h"
+#include "err.h"
 #include "locs.h"
 
 #include <sys/stat.h>

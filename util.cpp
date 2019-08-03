@@ -1,5 +1,6 @@
 
 #include "util.h"
+#include "err.h"
 
 #include <iostream>
 #include <iomanip>
@@ -35,26 +36,59 @@ static uid_t myuid = ::getuid();
 static const char sepFilePath = '/';
 static const char sepFileExt = '.';
 
+// OnDestroy/RunAtEnd
+
+OnDestroy::OnDestroy(const std::function<void()> &newFnAction) : fnAction(newFnAction) { }
+
+OnDestroy::~OnDestroy() {
+  // releasing the resource in destructor, likely cumulative after some exception, catch the potential exception here
+  try {
+    fnAction();
+  } catch (const Exception &e) {
+    std::cerr << rang::fg::yellow << "EXCEPTION while another error is in progress: " << e.what() << rang::style::reset << std::endl;
+  } catch (const std::exception& e) {
+    std::cerr << "EXCEPTION while another error is in progress (std::exception):" << rang::fg::red << e.what() << rang::style::reset << std::endl;
+  } catch (...) {
+    std::cerr << rang::fg::red << "UNKNOWN EXCEPTION while another error is in progress: " << rang::style::reset << std::endl;
+  }
+}
+
+void OnDestroy::doNow() {
+  fnAction(); // releasing the resource in a regular way: let exceptions propagate
+  fnAction = []() { };
+}
+
+RunAtEnd::RunAtEnd()
+{ }
+
+RunAtEnd::RunAtEnd(const std::function<void()> &newFnAction)
+: std::unique_ptr<OnDestroy>(new OnDestroy(newFnAction))
+{ }
+
+void RunAtEnd::reset(const std::function<void()> &newFnAction) {
+  std::unique_ptr<OnDestroy>::reset(new OnDestroy(newFnAction));
+}
+
+void RunAtEnd::doNow() {
+  get()->doNow();
+}
+
+
 namespace Util {
 
 void runCommand(const std::string &cmd, const std::string &what) {
-  int res = system(cmd.c_str());
-  if (res == -1)
-    std::cerr << "failed to " << what << ": the system error occurred: " << strerror(errno) << std::endl;
-  else if (res != 0)
-    std::cerr << "failed to " << what << ": the command failed with the exit status " << res << std::endl;
-
+  int res = ::system(cmd.c_str());
+  SYSCALL(res, "system", what.c_str()); // syscall failure
+  // command failure
   if (res != 0)
-    exit(1);
+    ERR2("run external command", "the command '" << what << "' failed with the exit status " << res)
 }
 
 std::string runCommandGetOutput(const std::string &cmd, const std::string &what) {
   // start the command
   FILE *f = ::popen(cmd.c_str(), "r");
-  if (f == nullptr) {
-    std::cerr << rang::fg::red << "the external command failed (" << cmd << ")" << rang::style::reset << std::endl;
-    exit(1);
-  }
+  if (f == nullptr)
+    ERR2("run external command", "popen failed for (" << cmd << ")")
   // read command's output
   std::ostringstream ss;
   char buf[1025];
@@ -73,10 +107,8 @@ std::string runCommandGetOutput(const std::string &cmd, const std::string &what)
 }
 
 void ckSyscallError(int res, const char *syscall, const char *arg) {
-  if (res == -1) {
-    std::cerr << "system call '" << syscall << "' failed, arg=" << arg << ": " << strerror(errno) << std::endl;
-    exit(1);
-  }
+  if (res == -1)
+    ERR2("system call", "'" << syscall << "' failed, arg=" << arg << ": " << strerror(errno))
 }
 
 std::string tmSecMs() {

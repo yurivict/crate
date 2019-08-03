@@ -1,6 +1,7 @@
 
 #include "args.h"
 #include "util.h"
+#include "err.h"
 
 #include <rang.hpp>
 
@@ -12,10 +13,7 @@
 
 
 #define ERR(msg...) \
-  { \
-    std::cerr << rang::fg::red << "args: " << msg << rang::style::reset << std::endl; \
-    exit(1); \
-  }
+  ERR2("parse args", msg)
 
 //
 // internals

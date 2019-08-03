@@ -6,6 +6,7 @@
 #include "mount.h"
 #include "scripts.h"
 #include "util.h"
+#include "err.h"
 #include "commands.h"
 
 #include <rang.hpp>

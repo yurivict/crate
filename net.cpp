@@ -9,6 +9,7 @@
 
 #include "net.h"
 #include "util.h"
+#include "err.h"
 
 #include <string>
 #include <vector>

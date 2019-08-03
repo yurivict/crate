@@ -1,6 +1,7 @@
 
 #include "spec.h"
 #include "util.h"
+#include "err.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,10 +18,7 @@
 #include "lst-all-script-sections.h" // generated from create.cpp and run.cpp by the Makefile
 
 #define ERR(msg...) \
-  { \
-    std::cerr << rang::fg::red << "spec parser: " << msg << rang::style::reset << std::endl; \
-    exit(1); \
-  }
+  ERR2("spec parser", msg)
 
 // all options
 static std::set<std::string> allOptions = {"x11", "net", "ssl-certs", "video", "gl", "dbg-ktrace"};

@@ -2,6 +2,7 @@
 #include "args.h"
 #include "spec.h"
 #include "util.h"
+#include "err.h"
 #include "misc.h"
 #include "commands.h"
 
@@ -11,7 +12,7 @@
 
 #include <iostream>
 
-int main(int argc, char** argv) {
+static int mainGuarded(int argc, char** argv) {
 
   //
   // can only run as a privileged user because we need to run chroot(8) and need to create jails
@@ -75,4 +76,19 @@ int main(int argc, char** argv) {
   }}
 
   return succ ? (returnCode <= 255 ? returnCode : 255) : 1; // not sure why sometimes returnCode=255
+}
+
+int main(int argc, char** argv) {
+  try {
+    return mainGuarded(argc, argv);
+  } catch (const Exception &e) {
+    std::cerr << rang::fg::red << e.what() << rang::style::reset << std::endl;
+    return 1;
+  } catch (const std::exception& e) {
+    std::cerr << "FIXME(EXCEPTION std::exception): " << rang::fg::red << e.what() << rang::style::reset << std::endl;
+    return 1;
+  } catch (...) {
+    std::cerr << rang::fg::red << "XXX UNKNOWN EXCEPTION IS CAUGHT" << rang::style::reset << std::endl;
+    return 1;
+  }
 }

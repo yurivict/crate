@@ -8,6 +8,7 @@
 #include "scripts.h"
 #include "ctx.h"
 #include "util.h"
+#include "err.h"
 #include "commands.h"
 
 #include <rang.hpp>
@@ -89,6 +90,13 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
     return STR(jailPath << subdir);
   };
 
+  RunAtEnd destroyJailDir([&jailPath,&args]() {
+    // remove the jail directory
+    LOG("removing the jail directory " << jailPath << " ...")
+    Util::Fs::rmdirHier(jailPath);
+    LOG("removing the jail directory " << jailPath << " done")
+  });
+
   // mounts
   std::list<std::unique_ptr<Mount>> mounts;
   auto mount = [&mounts](Mount *m) {
@@ -159,6 +167,17 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   if (res == -1)
     ERR("failed to create jail: " << jail_errmsg)
   int jid = res;
+
+  RunAtEnd destroyJail([jid,&jailXname,runScript,&args]() {
+    // stop and remove jail
+    runScript("run:before-remove-jail");
+    LOG("removing jail " << jailXname << " jid=" << jid << " ...")
+    if (::jail_remove(jid) == -1)
+      ERR("failed to remove jail: " << strerror(errno))
+    runScript("run:after-remove-jail");
+    LOG("removing jail " << jailXname << " jid=" << jid << " done")
+  });
+
   runScript("run:after-create-jail");
   LOG("jail " << jailXname << " has been created, jid=" << jid)
 
@@ -178,7 +197,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
 
   // set up networking
   RunAtEnd destroyEpipeAtEnd;
-  RunAtEnd destroyFiewallRulesAtEnd;
+  RunAtEnd destroyFirewallRulesAtEnd;
   auto optionNet = spec.optionNet();
   if (optionNet && (optionNet->allowOutbound() || optionNet->allowInbound())) {
     { // determine host's gateway interface
@@ -298,7 +317,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
         cmdFW(STR("add " << fwRuleOutNo << " nat " << fwNatOutCommonNo << " all from " << epipeIpB << " to any out xmit " << gwIface));
       }
       // destroy rules
-      destroyFiewallRulesAtEnd.reset([fwRuleInNo, fwRuleOutNo, fwRuleOutCommonNo, optionNet]() {
+      destroyFirewallRulesAtEnd.reset([fwRuleInNo, fwRuleOutNo, fwRuleOutCommonNo, optionNet]() {
         // delete the rule(s) for this epipe
         if (optionNet->allowInbound())
           Util::runCommand(STR("ipfw delete " << fwRuleInNo), CSTR("destroy firewall rule"));
@@ -478,24 +497,17 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   if (optionInitializeRc)
     runCommandInJail("/bin/sh /etc/rc.shutdown", "exec.stop");
 
-  // stop and remove jail
-  runScript("run:before-remove-jail");
-  LOG("removing jail " << jailXname << " jid=" << jid << " ...")
-  res = ::jail_remove(jid);
-  if (res == -1)
-    ERR("failed to remove jail: " << strerror(errno))
-  runScript("run:after-remove-jail");
-  LOG("removing jail " << jailXname << " jid=" << jid << " done")
+  runScript("run:end");
 
-  // unmount all
+  // release resources
+  destroyJail.doNow();
   for (auto &m : mounts)
     m->unmount();
-
-  // remove the jail directory
-  LOG("removing the jail directory " << jailPath << " ...")
-  runScript("run:end");
-  Util::Fs::rmdirHier(jailPath);
-  LOG("removing the jail directory " << jailPath << " done")
+  if (optionNet && (optionNet->allowOutbound() || optionNet->allowInbound())) {
+    destroyFirewallRulesAtEnd.doNow();
+    destroyEpipeAtEnd.doNow();
+  }
+  destroyJailDir.doNow();
 
   // done
   outReturnCode = returnCode;

@@ -9,6 +9,7 @@
 #include <iostream>
 
 #include "util.h"
+#include "err.h"
 #include "locs.h"
 
 #define ERR(msg...) ERR2("managing context info", msg)
