@@ -1,5 +1,12 @@
 ---
 
+##
+## Gogs crate definition.
+## It can run a fully functional gogs service out of a container.
+##
+
+# ASSUMES that directories $HOME/gogs/db and $HOME/gogs/log are present
+
 base:
     keep:
         - /usr/bin/su
@@ -21,7 +28,7 @@ dirs:
             - $HOME/gogs/log
 
 files:
-    share:
+    share:  # make the gogs configuration file persistent
         -
             - /usr/local/etc/gogs/conf/app.ini
             - $HOME/gogs/app.ini
