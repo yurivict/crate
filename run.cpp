@@ -177,7 +177,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   };
 
   // set up networking
-  RunAtEnd destroyPipeAtEnd;
+  RunAtEnd destroyEpipeAtEnd;
   RunAtEnd destroyFiewallRulesAtEnd;
   auto optionNet = spec.optionNet();
   if (optionNet && (optionNet->allowOutbound() || optionNet->allowInbound())) {
@@ -236,7 +236,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
     // set default route in jail
     runCommandInJailSilently(STR("route add default " << epipeIpA), "set default route in jail");
     // destroy the epipe when finished
-    destroyPipeAtEnd.reset([epipeIfaceA]() {
+    destroyEpipeAtEnd.reset([epipeIfaceA]() {
       Util::runCommand(STR("ifconfig " << epipeIfaceA << " destroy"), CSTR("destroy the jail epipe (" << epipeIfaceA << ")"));
     });
     // add firewall rules to NAT and route packets from jails to host's default GW
