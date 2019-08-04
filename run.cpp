@@ -32,8 +32,6 @@ extern "C" { // sys/jail.h isn't C++-safe: https://bugs.freebsd.org/bugzilla/sho
 #include <limits>
 #include <filesystem>
 
-// 'sysctl security.jail.allow_raw_sockets=1' is needed to ping from jail
-
 #define ERR(msg...) ERR2("running a crate container", msg)
 
 #define LOG(msg...) \
@@ -110,7 +108,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
     // we need to create vnet jails
     if (Util::getSysctlInt("kern.features.vimage") == 0)
       ERR("the crate needs network access, but the VIMAGE feature isn't available in the kernel (kern.features.vimage==0)")
-    // ipfw needs the ipfw_nat kernel module to function
+    // ipfw needs the ipfw_nat kernel module in order to function
     Util::ensureKernelModuleIsLoaded("ipfw_nat");
     // net.inet.ip.forwarding needs to be 1 for networking to work XXX it is "bad" to alter this value, need to see if this can be replaced with firewall rules
     if (Util::getSysctlInt("net.inet.ip.forwarding") == 0)
@@ -479,7 +477,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
       ),
       cmdFile
     );
-    // set ownershop/permissions
+    // set ownership/permissions
     Util::Fs::chown(J(cmdFile), myuid, mygid);
     Util::Fs::chmod(J(cmdFile), 0500); // User-RX
     // run it the same way as we would any other command
