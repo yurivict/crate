@@ -6,14 +6,7 @@
 #include <iostream>
 #include <iomanip>
 #include <functional>
-#if __cplusplus >= 201703L && __has_include(<filesystem>)
-#  include <filesystem>
-#else
-#  include <experimental/filesystem>
-  namespace std {
-    namespace filesystem = experimental::filesystem;
-  }
-#endif
+#include <filesystem>
 
 #include <rang.hpp>
 
