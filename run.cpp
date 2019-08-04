@@ -18,7 +18,7 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/param.h>
-extern "C" { // https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=238928
+extern "C" { // sys/jail.h isn't C++-safe: https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=238928
 #include <sys/jail.h>
 }
 #include <sys/uio.h>
