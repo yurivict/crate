@@ -118,6 +118,9 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
       ERR("the crate needs network access, but the VIMAGE feature isn't available in the kernel (kern.features.vimage==0)")
     // ipfw needs the ipfw_nat kernel module to function
     Util::ensureKernelModuleIsLoaded("ipfw_nat");
+    // net.inet.ip.forwarding needs to be 1 for networking to work XXX it is "bad" to alter this value, need to see if this can be replaced with firewall rules
+    if (Util::getSysctlInt("net.inet.ip.forwarding") == 0)
+      Util::setSysctlInt("net.inet.ip.forwarding", 1);
   }
 
   // helper

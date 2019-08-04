@@ -150,9 +150,13 @@ int getSysctlInt(const char *name) {
   int value;
   size_t size = sizeof(value);
 
-  SYSCALL(::sysctlbyname(name, &value, &size, NULL, 0), "sysctlbyname", name);
+  SYSCALL(::sysctlbyname(name, &value, &size, nullptr, 0), "sysctlbyname (get)", name);
 
   return value;
+}
+
+void setSysctlInt(const char *name, int value) {
+  SYSCALL(::sysctlbyname(name, nullptr, nullptr, &value, sizeof(value)), "sysctlbyname (set)", name);
 }
 
 void ensureKernelModuleIsLoaded(const char *name) {
