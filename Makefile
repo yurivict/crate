@@ -21,6 +21,7 @@ install: crate
 install-local: crate.x
 
 install-examples:
+	@mkdir -p $(DESTDIR)$(PREFIX)/share/examples/crate
 	@for e in `ls examples/`; do \
 		install examples/$$e $(DESTDIR)$(PREFIX)/share/examples/crate/$$e; \
 	done;
