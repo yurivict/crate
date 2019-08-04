@@ -21,10 +21,11 @@ Working examples (only the examples listed here are verified to be working, othe
 * chromium.yml: similarly to firefox.yml, you can create the chromium crate (chromium.crate) which will not preserve cookies, etc., just like firefox
 * opera.yml: opera.crate runs, but many sites appear broken, unlike with firefox.crate and chrome.crate
 * kodi.yml: kodi.crate runs but the texts aren't displayed due to missing font dependencies
-* gogs.yml: runs fine, listens on the port 3100, uses the persistent database
+* gogs.yml: runs fine, listens on the port 3100, uses the persistent database and settings stored on the host
 * amass.yml: runs fine
 * qtox.yml: runs fine in the crate, at the moment doesn't have a persistent state
 * xeyes.yml: runs fine
+* gzip.yml: runs fine, it's just the ```gzip``` executable
 
 ## Project status
 ```crate``` is in its alpha stage. Some features might not work as intended. I only started working on it in the late June 2019, so it is a very new project.
