@@ -1,0 +1,11 @@
+This file describes features that are not yet implemented, and bugs that are not yet fixed.
+
+* (feature) Configuration management
+  crate should understand configuration files (global /usr/local/etc/crate.yml, and local ~/.crate.yml).
+  They should define at least these items:
+  * crate search path: the paths searched when the crate's "run" command is invoked
+
+* (bug) net/inbound: crates can listen on any ports for inbound connections, but connections are rejected from the host itself.
+  See bug#239590: ipfw rule doesn't forward TCP connections made through the host's LAN address
+
+
