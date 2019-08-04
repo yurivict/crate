@@ -1,14 +1,14 @@
 # crate
 
-Crate is a containerizer for FreeBSD. Containerization is a form of OS-level virtualization of software. It can containerize any packages and/or services into a container file, and then run the container at a later time in a FreeBSD jail.
+Crate is a containerizer for FreeBSD. Containerization is a form of OS-level virtualization of software. It can containerize any packages and/or services into a container file, and then run the container at a later time in a dedicated FreeBSD jail.
 
 Crate containers contain everything that is needed to run the containerized software, and only need the crate executable and system functions from the kernel to run.
 
 ## Features
-* graphics: X11 programs reuse the Xorg server running on the host.
-* networking: both outgoing and incoming connections can be enabled for the crate, so that TCP and UDP connections can be initiated and accepted by the program running in the container.
-* video: programs can play videos using /dev/videoN devices shared with the host.
-* shared folders and files: host folders and files can be shared with crates, allowing them to run using persistent state.
+* graphics: X11 programs can reuse the Xorg server running on the host.
+* networking: both outgoing and incoming connections can be optionally enabled for the crate, so that TCP and UDP connections can be initiated and accepted by the program running in the container. Outside TCP/UDP ports can be mapped to the ports inside crates.
+* video: programs can play videos using V4L /dev/videoN devices shared with the host.
+* shared folders and files: any number of host folders and files can be shared with crates, allowing them to run using persistent state.
 
 ## Documentation
 The manpage exists but it doesn't explain much yet, it has to be expanded.
