@@ -111,9 +111,14 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   // parse +CRATE.SPEC
   auto spec = parseSpec(J("/+CRATE.SPEC")).preprocess();
 
-  // check if VIMAGE feature is compiled into the kernel
-  if (spec.optionExists("net") && Util::getSysctlInt("kern.features.vimage") == 0)
-    ERR("the crate needs network access, but the VIMAGE feature isn't available in the kernel (kern.features.vimage==0)")
+  // check the pre-conditions
+  if (spec.optionExists("net")) {
+    // we need to create vnet jails
+    if (Util::getSysctlInt("kern.features.vimage") == 0)
+      ERR("the crate needs network access, but the VIMAGE feature isn't available in the kernel (kern.features.vimage==0)")
+    // ipfw needs the ipfw_nat kernel module to function
+    Util::ensureKernelModuleIsLoaded("ipfw_nat");
+  }
 
   // helper
   auto runScript = [&jailPath,&spec](const char *section) {

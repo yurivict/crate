@@ -25,10 +25,12 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/sysctl.h>
+#include <sys/param.h>
+#include <sys/linker.h>
 #include <pwd.h>
 
 
-#define SYSCALL(res, syscall, arg) Util::ckSyscallError(res, syscall, arg)
+#define SYSCALL(res, syscall, arg ...) Util::ckSyscallError(res, syscall, arg)
 
 static uid_t myuid = ::getuid();
 
@@ -106,8 +108,8 @@ std::string runCommandGetOutput(const std::string &cmd, const std::string &what)
   return ss.str();
 }
 
-void ckSyscallError(int res, const char *syscall, const char *arg) {
-  if (res == -1)
+void ckSyscallError(int res, const char *syscall, const char *arg, const std::function<bool(int)> whiteWash) {
+  if (res == -1 && !whiteWash(errno))
     ERR2("system call", "'" << syscall << "' failed, arg=" << arg << ": " << strerror(errno))
 }
 
@@ -151,6 +153,10 @@ int getSysctlInt(const char *name) {
   SYSCALL(::sysctlbyname(name, &value, &size, NULL, 0), "sysctlbyname", name);
 
   return value;
+}
+
+void ensureKernelModuleIsLoaded(const char *name) {
+  SYSCALL(::kldload("ipfw_nat"), "kldload", name, [](int err) {return err == EEXIST;});
 }
 
 std::string gethostname() {

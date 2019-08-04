@@ -82,11 +82,12 @@ namespace Util {
 
 void runCommand(const std::string &cmd, const std::string &what);
 std::string runCommandGetOutput(const std::string &cmd, const std::string &what);
-void ckSyscallError(int res, const char *syscall, const char *arg);
+void ckSyscallError(int res, const char *syscall, const char *arg, const std::function<bool(int)> whiteWash = [](int err) {return false;});
 std::string tmSecMs();
 std::string filePathToBareName(const std::string &path);
 std::string filePathToFileName(const std::string &path);
 int getSysctlInt(const char *name);
+void ensureKernelModuleIsLoaded(const char *name);
 std::string gethostname();
 std::vector<std::string> splitString(const std::string &str, const std::string &delimiter);
 std::string stripTrailingSpace(const std::string &str);
