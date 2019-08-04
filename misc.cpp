@@ -1,3 +1,5 @@
+// Copyright (C) 2019 by Yuri Victorovich. All rights reserved.
+
 #include "misc.h"
 #include "util.h"
 #include "err.h"

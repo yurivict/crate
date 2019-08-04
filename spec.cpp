@@ -1,3 +1,4 @@
+// Copyright (C) 2019 by Yuri Victorovich. All rights reserved.
 
 #include "spec.h"
 #include "util.h"
