@@ -20,6 +20,11 @@ install: crate
 
 install-local: crate.x
 
+install-examples:
+	@for e in `ls examples/`; do \
+		install examples/$$e $(DESTDIR)$(PREFIX)/share/examples/crate/$$e; \
+	done;
+
 crate.x: crate
 	sudo install -s -m 04755 -o 0 -g 0 crate crate.x
 
@@ -40,3 +45,4 @@ spec.cpp: lst-all-script-sections.h
 a: all
 c: clean
 l: install-local
+e: install-examples
