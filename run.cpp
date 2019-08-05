@@ -458,7 +458,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   } else {
     // No command is specified to be run.
     // This means that this is a service-only crate. We have to run some command, otherwise the crate would just exit immediately.
-    LOG("this is a service-only crate, install and run the command tha exits on Ctrl-C")
+    LOG("this is a service-only crate, install and run the command that exits on Ctrl-C")
     auto cmdFile = "/run.sh";
     writeFileInJail(STR(
         "#!/bin/sh"                                                 << std::endl <<
