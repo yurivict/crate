@@ -1,8 +1,5 @@
 ---
 
-# qTox fails in crate (jail): https://github.com/qTox/qTox/issues/5740
-# the workaround below fixes this (pkg/local-override)
-
 pkg:
     install:
         - qTox
