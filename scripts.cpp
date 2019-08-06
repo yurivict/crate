@@ -17,15 +17,21 @@ namespace Scripts {
 //
 
 static std::string escape(const std::string &script) {
+  // escape in order to be single-quoted, and run by /bin/sh via system(3)
+  // XXX not sure if this is a correct escaping procedure, because it isn't clear how system(3) interprets the string
   std::ostringstream ss;
-  for (auto chr : script) {
+  for (auto chr : script)
     switch (chr) {
+    case '\'':
+      ss << "'\\''";
+      break;
+    case '$':
+    case '#':
     case '"':
-    case '\\':
-      ss << '\\';
+      ss << "\\";
+    default:
+      ss << chr;
     }
-    ss << chr;
-  }
   return ss.str();
 }
 
@@ -36,11 +42,8 @@ static std::string escape(const std::string &script) {
 void section(const char *sec, const std::map<std::string, std::map<std::string, std::string>> &scripts, FnRunner fnRunner) {
   auto it = scripts.find(sec);
   if (it != scripts.end())
-    for (auto &script : it->second) {
-      std::cout << rang::fg::cyan << "@run-script#" << sec << "#" << script.first << "#begin" << rang::style::reset << std::endl;
-      fnRunner(STR("/bin/sh -c \"" << escape(script.second) << "\""));
-      std::cout << rang::fg::cyan << "@run-script#" << sec << "#" << script.first << "#end" << rang::style::reset << std::endl;
-    }
+    for (auto &script : it->second)
+      fnRunner(STR("/bin/sh -c '" << escape(script.second) << "'"));
 }
 
 }
