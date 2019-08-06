@@ -43,8 +43,13 @@ static gid_t mygid = ::getgid();
 static std::string guessCrateName(const Spec &spec) {
   if (!spec.runExecutable.empty())
     return spec.runExecutable.substr(spec.runExecutable.rfind('/') + 1);
-  else
-    return spec.runServices[0]; // XXX service might have arguments, etc.
+  else {
+    std::ostringstream ss;
+    ss << *spec.runServices.rbegin();
+    for (auto it = spec.runServices.rbegin() + 1; it != spec.runServices.rend(); it++)
+      ss << '+' << *it;
+    return ss.str();
+  }
 }
 
 static void notifyUserOfLongProcess(bool begin, const std::string &processName, const std::string &doingWhat) {
