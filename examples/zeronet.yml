@@ -1,0 +1,27 @@
+---
+
+base:
+    keep:
+        - /usr/sbin/chown
+        - /usr/bin/find
+        - /usr/bin/touch
+
+pkg:
+    install: zeronet
+    local-override:
+        zeronet: /usr/ports/security/zeronet/work/pkg/zeronet-0.6.5.25_2.txz
+
+run:
+    service: zeronet
+
+options:
+    net:
+        outbound: wan
+        inbound-tcp:  # zeronet crate listens on the port 43111 forwarded to 43110
+            43111: 43110
+
+scripts:
+    run:before-start-services:
+        - "echo zeronet_enable=\"YES\" >> /etc/rc.conf"
+        - "echo zeronet_args=\"${zeronet_args} --ui_ip 0.0.0.0\" >> /etc/rc.conf"
+        - "echo zeronet_args=\"${zeronet_args} --ui_host localhost:43111\" >> /etc/rc.conf"
