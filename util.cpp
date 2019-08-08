@@ -397,7 +397,8 @@ char isElfFileOrDir(const std::string &file) { // find if the file is a regular 
   if (sb.st_mode & S_IFDIR)
     return 'D';
 
-  if (sb.st_mode & S_IFREG && sb.st_mode & S_IXUSR && sb.st_size > 0x80) { // this reference claims that ELF can be as small as 142 bytes: http://timelessname.com/elfbin/
+  if (sb.st_mode & S_IFREG /*&& sb.st_mode & S_IXUSR*/ && sb.st_size > 0x80) { // this reference claims that ELF can be as small as 142 bytes: http://timelessname.com/elfbin/
+    // x-bit is disabled above: some .so files have no exec bit, particularly /usr/lib/pam_*.so
     uint8_t signature[4];
     // read the signature
     int fd = ::open(file.c_str(), O_RDONLY);
