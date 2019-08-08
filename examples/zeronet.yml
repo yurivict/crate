@@ -8,8 +8,6 @@ base:
 
 pkg:
     install: zeronet
-    local-override:
-        zeronet: /usr/ports/security/zeronet/work/pkg/zeronet-0.6.5.25_2.txz
 
 run:
     service: zeronet
