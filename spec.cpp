@@ -91,7 +91,7 @@ static std::map<std::string, std::string> parseScriptsSection(const std::string 
   // * array of array of scalar
   // * map of {scalar, array of scalar}
 
-  static const char *errMsg = "scripts should be scalars, arrays of scalars, arrays of arrays of scalars, or maps of scalars or of arrays of scalars";
+  static const char *errMsg = "scripts must be scalars, arrays of scalars, arrays of arrays of scalars, or maps of scalars or of arrays of scalars";
 
   std::string str;
   if (listOrScalar(node, str)) { // a single single-line script OR a single multi-line script
@@ -203,11 +203,11 @@ void Spec::validate() const {
     return path[0] == '/';
   };
 
-  // should be something to run
+  // must have something to run
   if (runExecutable.empty() && runServices.empty())
     ERR("crate has to have either the executable to run, some services to run, or both, it can't have nothing to do")
 
-  // should be no conflicting package local overrides
+  // must be no duplicate local package overrides
   if (!pkgLocalOverride.empty()) {
     std::map<std::string, std::string> pkgs;
     for (auto &lo : pkgLocalOverride) {
@@ -218,10 +218,9 @@ void Spec::validate() const {
   }
 
   // executable must have full path
-  if (!runExecutable.empty()) {
+  if (!runExecutable.empty())
     if (!isFullPath(runExecutable))
       ERR("the executable path has to be a full path, executable=" << runExecutable)
-  }
 
   // shared directories must be full paths
   for (auto &dirShare : dirsShare)
@@ -243,7 +242,7 @@ void Spec::validate() const {
     if (s.first.empty() || allScriptSections.find(s.first) == allScriptSections.end())
       ERR("the unknown script section '" << s.first << "' was supplied")
 
-  // port ranges in net options should be consistent
+  // port ranges in net options must be consistent
   if (auto optNet = optionNet())
     for (auto pv : {&optNet->inboundPortsTcp, &optNet->inboundPortsUdp})
       for (auto &rangePair : *pv)
@@ -386,7 +385,7 @@ Spec parseSpec(const std::string &fname) {
           auto &optVal = spec.options[sopt];
           if (sopt == "net") {
             if (!lo.second.IsMap() && !lo.second.IsNull())
-              ERR("options/net value should be a map or empty when options are in the extended format")
+              ERR("options/net value must be a map or empty when options are in the extended format")
             if (lo.second.IsMap()) {
               optVal.reset(new Spec::NetOptDetails); // blank "net" option details
               auto optNetDetails = static_cast<Spec::NetOptDetails*>(optVal.get());
@@ -419,7 +418,7 @@ Spec parseSpec(const std::string &fname) {
                     for (auto portsPair : netOpt.second)
                       optNetDetails->inboundPortsTcp.push_back({parsePortRange(portsPair.first.as<std::string>()), parsePortRange(portsPair.second.as<std::string>())});
                   } else {
-                    ERR("options/net/inbound-tcp value should be an array, a scalar or a map")
+                    ERR("options/net/inbound-tcp value must be an array, a scalar or a map")
                   }
                 } else if (AsString(netOpt.first) == "inbound-udp") {
                   if (listOrScalar(netOpt.second, optNetDetails->inboundPortsUdp, "options")) {
@@ -427,7 +426,7 @@ Spec parseSpec(const std::string &fname) {
                     for (auto portsPair : netOpt.second)
                       optNetDetails->inboundPortsUdp.push_back({parsePortRange(portsPair.first.as<std::string>()), parsePortRange(portsPair.second.as<std::string>())});
                   } else {
-                    ERR("options/net/inbound-udp value should be an array, a scalar or a map")
+                    ERR("options/net/inbound-udp value must be an array, a scalar or a map")
                   }
                 } else
                   ERR("an invalid value options/net/" << netOpt.first << " supplied")
@@ -437,7 +436,7 @@ Spec parseSpec(const std::string &fname) {
             }
           } else {
             if (!lo.second.IsNull())
-              ERR("options/* values should be empty when options are in the extended format")
+              ERR("options/* values must be empty when options are in the extended format")
           }
         }
       } else {
@@ -445,7 +444,7 @@ Spec parseSpec(const std::string &fname) {
       }
     } else if (isKey(k, "scripts")) {
       if (!k.second.IsMap())
-        ERR("scripts should be a map")
+        ERR("scripts must be a map")
         for (auto secScripts : k.second) {
           const auto section = AsString(secScripts.first);
           if (spec.scripts.find(section) != spec.scripts.end())
