@@ -12,8 +12,7 @@ base:
         - /usr/bin/su
 
 pkg:
-    install:
-        - gogs
+    install: gogs
 
 run:
     service: gogs
