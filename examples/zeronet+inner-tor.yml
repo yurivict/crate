@@ -1,28 +1,33 @@
-
+---
 
 base:
-    keep: all
-    remove: bin/l*
-    remove: lib/libelf.so*
+    keep:
+        - /usr/sbin/chown
+        - /usr/bin/find
+        - /usr/bin/touch
+        - /usr/bin/limits  # for tor
+        - /usr/bin/su      # for tor
+        - /bin/csh         # XXX not sure why csh is needed by tor
+    keep-wildcard:
+        - /usr/lib/pam_*.so     # pam needed for su called by tor
+        - /usr/lib/pam_*.so.*   # --""--
 
 pkg:
-    install: zeronet
+    install: zeronet tor
 
 run:
-    service: zeronet
-
-net:
-    define_hostname: zeronet
-    inbound:
-        http:
-            port: 10001
-            route_to: 43110
-
-fs:
-    files:
-        log: /var/log/zeronet.log
-    dirs:
-        log: /var/log/zeronet
+    service: tor zeronet
 
 options:
-    tor: service
+    net:
+        outbound: wan
+        inbound-tcp:  # zeronet crate listens on the port 43111 forwarded to 43110
+            43111: 43110
+
+scripts:
+    run:before-start-services:
+        - "echo zeronet_enable=\"YES\" >> /etc/rc.conf"
+        - "echo zeronet_args=\"${zeronet_args} --ui_ip 0.0.0.0\" >> /etc/rc.conf"
+        - "echo zeronet_args=\"${zeronet_args} --ui_host localhost:43111\" >> /etc/rc.conf"
+        - "echo zeronet_args=\"${zeronet_args} --tor always\" >> /etc/rc.conf"
+        - "echo ControlPort 9051 >> /usr/local/etc/tor/torrc"
