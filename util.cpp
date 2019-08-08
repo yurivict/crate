@@ -7,6 +7,7 @@
 #include <iomanip>
 #include <functional>
 #include <filesystem>
+#include <algorithm>
 
 #include <rang.hpp>
 
@@ -199,6 +200,12 @@ std::string pathSubstituteVars(const std::string &path) {
     return STR(::getpwuid(myuid)->pw_dir << path.substr(5));
 
   return path;
+}
+
+std::vector<std::string> reverseVector(const std::vector<std::string> &v) {
+  auto vc = v;
+  std::reverse(vc.begin(), vc.end());
+  return vc;
 }
 
 namespace Fs {

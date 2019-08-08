@@ -96,6 +96,7 @@ std::vector<std::string> splitString(const std::string &str, const std::string &
 std::string stripTrailingSpace(const std::string &str);
 unsigned toUInt(const std::string &str);
 std::string pathSubstituteVars(const std::string &path);
+std::vector<std::string> reverseVector(const std::vector<std::string> &v);
 
 namespace Fs {
 

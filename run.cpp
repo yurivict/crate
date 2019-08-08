@@ -487,7 +487,7 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
 
   // stop services, if any
   if (!spec.runServices.empty())
-    for (auto &service : spec.runServices)
+    for (auto &service : Util::reverseVector(spec.runServices))
       runCommandInJail(STR("/usr/sbin/service " << service << " onestop"), "stop the service in jail");
 
   if (spec.optionExists("dbg-ktrace"))
