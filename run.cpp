@@ -320,14 +320,14 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
       destroyFirewallRulesAtEnd.reset([fwRuleInNo, fwRuleOutNo, fwRuleOutCommonNo, optionNet]() {
         // delete the rule(s) for this epipe
         if (optionNet->allowInbound())
-          Util::runCommand(STR("ipfw delete " << fwRuleInNo), CSTR("destroy firewall rule"));
+          Util::runCommand(STR("ipfw delete " << fwRuleInNo), "destroy firewall rule");
         if (optionNet->allowOutbound()) {
-          Util::runCommand(STR("ipfw delete " << fwRuleOutNo), CSTR("destroy firewall rule"));
+          Util::runCommand(STR("ipfw delete " << fwRuleOutNo), "destroy firewall rule");
           { // possibly delete the common rules if this is the last firewall
             std::unique_ptr<Ctx::FwUsers> fwUsers(Ctx::FwUsers::lock());
             fwUsers->del(::getpid());
             if (fwUsers->isEmpty())
-              Util::runCommand(STR("ipfw delete " << fwRuleOutCommonNo), CSTR("destroy firewall rule"));
+              Util::runCommand(STR("ipfw delete " << fwRuleOutCommonNo), "destroy firewall rule");
             fwUsers->unlock();
           }
         }
