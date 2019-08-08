@@ -7,6 +7,7 @@ base:
         - /usr/bin/touch
         - /usr/bin/limits  # for tor
         - /usr/bin/su      # for tor
+        - /bin/ps          # for tor service to validate /var/run/tor/tor.pid file
         - /bin/csh         # XXX not sure why csh is needed by tor
     keep-wildcard:
         - /usr/lib/pam_*.so     # pam needed for su called by tor
