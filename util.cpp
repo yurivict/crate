@@ -391,7 +391,7 @@ bool isXzArchive(const char *file) {
   }
 }
 
-char isElfFileOrDir(const std::string &file) { // find if the file is a regular file, has the exec bit set, and has the signature of the ELF file
+char isElfFileOrDir(const std::string &file) { // find if the file is a regular file, has the exec bit set, and is a dynamic ELF file
   int res;
 
   struct stat sb;
@@ -401,8 +401,13 @@ char isElfFileOrDir(const std::string &file) { // find if the file is a regular 
     return 'N'; // ? what else to do after the above
   }
 
+  // directory?
   if (sb.st_mode & S_IFDIR)
     return 'D';
+
+  // object files aren't dynamic ELFs
+  if (file.size() > 2 && file[file.size()-1] == 'o' && file[file.size()-2] == '.')
+    return 'N';
 
   if (sb.st_mode & S_IFREG /*&& sb.st_mode & S_IXUSR*/ && sb.st_size > 0x80) { // this reference claims that ELF can be as small as 142 bytes: http://timelessname.com/elfbin/
     // x-bit is disabled above: some .so files have no exec bit, particularly /usr/lib/pam_*.so
