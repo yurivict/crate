@@ -300,6 +300,8 @@ Spec parseSpec(const std::string &fname) {
       for (auto b : k.second) {
         if (isKey(b, "keep")) {
           listOrScalarOnly(b.second, spec.baseKeep, "base/keep");
+        } else if (isKey(b, "keep-wildcard")) {
+          listOrScalarOnly(b.second, spec.baseKeepWildcard, "base/keep-wildcard");
         } else if (isKey(b, "remove")) {
           listOrScalarOnly(b.second, spec.baseRemove, "base/remove");
         } else {

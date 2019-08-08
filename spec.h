@@ -28,6 +28,7 @@ public:
     bool allowInbound() const;
   };
   std::vector<std::string>                           baseKeep;
+  std::vector<std::string>                           baseKeepWildcard;
   std::vector<std::string>                           baseRemove;
 
   std::vector<std::string>                           pkgInstall;              // 0..oo packages to install

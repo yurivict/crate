@@ -63,7 +63,7 @@ static void notifyUserOfLongProcess(bool begin, const std::string &processName, 
 }
 
 static void runChrootCommand(const std::string &jailPath, const std::string &cmd, const char *descr) {
-  Util::runCommand(STR("ASSUME_ALWAYS_YES=yes /usr/sbin/chroot " << jailPath << " " << cmd), descr);
+  Util::runCommand(STR(Cmd::chroot(jailPath) << cmd), descr);
 }
 
 static void installAndAddPackagesInJail(const std::string &jailPath,
@@ -121,7 +121,7 @@ static std::set<std::string> getElfDependencies(const std::string &elfPath, cons
   // but it's hard to then find the disk location, ld-elf.so does this through some WooDoo magic.
   // Instead, we just use ldd(1) to read this information.
   std::istringstream is(Util::runCommandGetOutput(
-    STR("/usr/sbin/chroot " << jailPath << " /bin/sh -c \"ldd " << elfPath << " | grep '=>' | sed -e 's|.* => ||; s| .*||'\""), "get elf dependencies"));
+    STR(Cmd::chroot(jailPath) << "/bin/sh -c \"ldd " << elfPath << " | grep '=>' | sed -e 's|.* => ||; s| .*||'\""), "get elf dependencies"));
   std::string s;
   while (std::getline(is, s, '\n'))
     if (!s.empty() && filter(s))
@@ -169,6 +169,9 @@ static void removeRedundantJailParts(const std::string &jailPath, const Spec &sp
   }
   for (auto &file : spec.baseKeep)
     keepFile(file);
+  for (auto &fileWildcard : spec.baseKeepWildcard)
+    for (auto &file : Util::Fs::expandWildcards(fileWildcard, Cmd::chroot(jailPath)))
+      keepFile(file);
   if (!spec.runServices.empty()) {
     keepFile("/usr/sbin/service");  // needed to run a service
     keepFile("/bin/cat");           // based on ktrace of 'service {name} start'

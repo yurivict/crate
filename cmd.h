@@ -7,6 +7,7 @@
 namespace Cmd {
 
 extern const std::string xz;
+std::string chroot(const std::string &path); // returns cmroot command prefix with the trailing space
 
 }
 

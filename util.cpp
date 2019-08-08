@@ -453,8 +453,8 @@ void copyFile(const std::string &srcFile, const std::string &dstFile) {
   }
 }
 
-std::vector<std::string> expandWildcards(const std::string &wildcardPath) {
-  return splitString(runCommandGetOutput(STR("/bin/ls " << wildcardPath), "wildcard expansion"), "\n"); // XXX the 'wildcard' library might help (?)
+std::vector<std::string> expandWildcards(const std::string &wildcardPath, const std::string &cmdPrefix) {
+  return splitString(runCommandGetOutput(STR(cmdPrefix << "/bin/ls " << wildcardPath), "wildcard expansion"), "\n"); // XXX the 'wildcard' library might help (?)
 }
 
 }
