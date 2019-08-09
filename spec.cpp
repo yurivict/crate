@@ -477,15 +477,15 @@ Spec parseSpec(const std::string &fname) {
             if (lo.second.IsMap()) {
               optVal.reset(new Spec::TorOptDetails); // blank "tor" option details
               auto optTorDetails = static_cast<Spec::TorOptDetails*>(optVal.get());
-              for (auto netOpt : lo.second) {
-                if (AsString(netOpt.first) == "control-port") {
-                  if (!YAML::convert<bool>::decode(netOpt.second, optTorDetails->controlPort))
-                    ERR("options/tor/control-port can't be converted to boolean: " << netOpt.second.as<std::string>())
+              for (auto torOpt : lo.second) {
+                if (AsString(torOpt.first) == "control-port") {
+                  if (!YAML::convert<bool>::decode(torOpt.second, optTorDetails->controlPort))
+                    ERR("options/tor/control-port can't be converted to boolean: " << torOpt.second.as<std::string>())
                 } else
-                  ERR("the invalid value options/tor/" << netOpt.first << " supplied")
+                  ERR("the invalid value options/tor/" << torOpt.first << " supplied")
               }
             } else
-              optVal.reset(Spec::TorOptDetails::createDefault()); // default "net" option details
+              optVal.reset(Spec::TorOptDetails::createDefault()); // default "tor" option details
           } else {
             if (!lo.second.IsNull())
               ERR("options/* values must be empty when options are in the extended format")
