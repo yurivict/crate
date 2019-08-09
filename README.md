@@ -22,8 +22,8 @@ Working examples (only the examples listed here are verified to be working, othe
 * opera.yml: opera.crate runs, but many sites appear broken, unlike with firefox.crate and chrome.crate
 * kodi.yml: kodi.crate runs but the texts aren't displayed due to missing font dependencies
 * gogs.yml: runs fine, listens on the port 3100, uses the persistent database and settings stored on the host
-* zeronet.yml: runs fine, listens on the port 43111, acceses zero-net network through clear-net, so far only uses internal db (that disappears between runs)
-* zeronet+inner-tor.yml: runs fine, listens on the port 43111, acceses zero-net network through clear-net, so far only uses internal db (that disappears between runs)
+* zeronet.yml: runs fine, listens on the port 43111, accesses zero-net network through clear-net, so far only uses internal db (that disappears between runs)
+* zeronet+inner-tor.yml: runs fine, listens on the port 43111, accesses zero-net network through clear-net, so far only uses internal db (that disappears between runs)
 * amass.yml: runs fine
 * qtox.yml: runs fine in the crate, at the moment doesn't have a persistent state
 * xeyes.yml: runs fine
@@ -40,7 +40,10 @@ The workflow is based on two basic operations that crate supports: ```create``` 
 ## How to install
 crate can be installed using the port ```sysutils/crate```: cd /usr/ports/sysutils/crate && make install clean```
 
-Unfortunately, due to the STL feature ```filesystem``` not being available in the version of the system 12.0-RELEASE-p7 used by the poudriere(8), packages can't be available on FreeBSD 12, but it can be built and installed manually with the above command. Packages should be available on FreeBSD 13.
+Unfortunately, due to the STL feature ```filesystem``` not being available in the version of the system 12.0-RELEASE-p7 used by poudriere(8), packages can't be available on FreeBSD 12, but it can be built and installed manually with the above command. Packages should be available on FreeBSD 13.
+
+## Caveats
+* Inbound network ports can't be accessed from the host running the crate because of this bug: https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=239590 , currently they can only be accessed from other hosts (by connecting to this host on that port).
 
 ## TODO list
 See the TODO file in the project. It will be expanded as needed.
