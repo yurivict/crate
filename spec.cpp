@@ -22,7 +22,7 @@
   ERR2("spec parser", msg)
 
 // all options
-static std::set<std::string> allOptions = {"x11", "net", "ssl-certs", "video", "gl", "dbg-ktrace"};
+static std::set<std::string> allOptions = {"x11", "net", "ssl-certs", "tor", "video", "gl", "dbg-ktrace"};
 
 // helpers
 static std::string AsString(const YAML::Node &node) {
@@ -133,13 +133,14 @@ static Spec::NetOptDetails::PortRange parsePortRange(const std::string &str) {
 Spec::OptDetails::~OptDetails() {
 }
 
-Spec::NetOptDetails::NetOptDetails() // default "net" options allow all outbound and no inbound
+Spec::NetOptDetails::NetOptDetails()
 : outboundWan(false),
   outboundLan(false),
   outboundHost(false)
 { }
 
 Spec::NetOptDetails* Spec::NetOptDetails::createDefault() {
+  // default "net" options allow all outbound and no inbound
   auto d = new NetOptDetails;
   d->outboundWan = true; // all outbound is allowed by default
   d->outboundLan = true;
@@ -160,10 +161,28 @@ bool Spec::optionExists(const char* opt) const {
 }
 
 const Spec::NetOptDetails* Spec::optionNet() const {
-  auto it = options.find("net");
+  return getOptionDetails<Spec::NetOptDetails>("net");
+}
+
+const Spec::TorOptDetails* Spec::optionTor() const {
+  return getOptionDetails<Spec::TorOptDetails>("tor");
+}
+
+template<class OptDetailsClass>
+const OptDetailsClass* Spec::getOptionDetails(const char *opt) const {
+  auto it = options.find(opt);
   if (it == options.end())
     return nullptr;
-  return static_cast<const Spec::NetOptDetails*>(it->second.get());
+  return static_cast<const OptDetailsClass*>(it->second.get());
+}
+
+Spec::TorOptDetails::TorOptDetails()
+: controlPort(false)
+{ }
+
+Spec::TorOptDetails* Spec::TorOptDetails::createDefault() {
+  // default "tor" option runs tor in the default mode, which is to just have the http proxy port open, and nothing else
+  return new TorOptDetails;
 }
 
 // preprocess function processes some options, etc. for simplicity of use both by users and by our 'create' module
@@ -183,6 +202,24 @@ Spec Spec::preprocess() const {
   // ssl-certs option => install the ca_root_nss package
   if (O("ssl-certs", false))
     spec.pkgInstall.push_back("ca_root_nss");
+
+  // tor option => several actions need to be taken
+  if (auto optionTor = spec.optionTor()) {
+    // install the tor package
+    spec.pkgInstall.push_back("tor");
+    // run the service before everything else
+    spec.runServices.insert(spec.runServices.begin(), "tor");
+    // keep some files that are needed by the tor service to run
+    spec.baseKeep.push_back("/usr/bin/limits");
+    spec.baseKeep.push_back("/usr/bin/su");
+    spec.baseKeep.push_back("/bin/ps");                      // for tor service to validate /var/run/tor/tor.pid file
+    spec.baseKeep.push_back("/bin/csh");                     // XXX not sure why csh is needed by tor
+    spec.baseKeepWildcard.push_back("/usr/lib/pam_*.so");    // pam is needed for su called by tor
+    spec.baseKeepWildcard.push_back("/usr/lib/pam_*.so.*");  // pam is needed for su called by tor
+    // optional tor control port
+    if (optionTor->controlPort)
+      spec.scripts["run:before-start-services"]["openTorControlPort"] = "echo ControlPort 9051 >> /usr/local/etc/tor/torrc";
+  }
 
   // gl option => install nvidia-driver & mesa-dri (XXX for now it only works on nvidia-card-based systems)
   if (O("gl", false)) {
@@ -374,18 +411,21 @@ Spec parseSpec(const std::string &fname) {
       }
     } else if (isKey(k, "options")) {
       if (listOrScalar(k.second, spec.options, "options")) {
-        // set details to options
-        auto it = spec.options.find("net");
-        if (it != spec.options.end())
-          it->second.reset(Spec::NetOptDetails::createDefault()); // default "net" option details
+        // set details to options that sjupport them
+        auto itNet = spec.options.find("net");
+        if (itNet != spec.options.end())
+          itNet->second.reset(Spec::NetOptDetails::createDefault()); // default "net" option details
+        auto itTor = spec.options.find("tor");
+        if (itTor != spec.options.end())
+          itTor->second.reset(Spec::TorOptDetails::createDefault()); // default "tor" option details
       } else if (k.second.IsMap()) {
         // options are a map: they are in the extended format, parse them in a custom fashion, one by one
         for (auto lo : k.second) {
           auto sopt = AsString(lo.first);
           auto &optVal = spec.options[sopt];
+          if (!lo.second.IsMap() && !lo.second.IsNull())
+            ERR("options/net value must be a map or empty when options are in the extended format")
           if (sopt == "net") {
-            if (!lo.second.IsMap() && !lo.second.IsNull())
-              ERR("options/net value must be a map or empty when options are in the extended format")
             if (lo.second.IsMap()) {
               optVal.reset(new Spec::NetOptDetails); // blank "net" option details
               auto optNetDetails = static_cast<Spec::NetOptDetails*>(optVal.get());
@@ -429,11 +469,23 @@ Spec parseSpec(const std::string &fname) {
                     ERR("options/net/inbound-udp value must be an array, a scalar or a map")
                   }
                 } else
-                  ERR("an invalid value options/net/" << netOpt.first << " supplied")
+                  ERR("the invalid value options/net/" << netOpt.first << " supplied")
               }
-            } else {
+            } else
               optVal.reset(Spec::NetOptDetails::createDefault()); // default "net" option details
-            }
+          } else if (sopt == "tor") {
+            if (lo.second.IsMap()) {
+              optVal.reset(new Spec::TorOptDetails); // blank "tor" option details
+              auto optTorDetails = static_cast<Spec::TorOptDetails*>(optVal.get());
+              for (auto netOpt : lo.second) {
+                if (AsString(netOpt.first) == "control-port") {
+                  if (!YAML::convert<bool>::decode(netOpt.second, optTorDetails->controlPort))
+                    ERR("options/tor/control-port can't be converted to boolean: " << netOpt.second.as<std::string>())
+                } else
+                  ERR("the invalid value options/tor/" << netOpt.first << " supplied")
+              }
+            } else
+              optVal.reset(Spec::TorOptDetails::createDefault()); // default "net" option details
           } else {
             if (!lo.second.IsNull())
               ERR("options/* values must be empty when options are in the extended format")

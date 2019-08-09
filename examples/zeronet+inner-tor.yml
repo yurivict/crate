@@ -5,25 +5,20 @@ base:
         - /usr/sbin/chown
         - /usr/bin/find
         - /usr/bin/touch
-        - /usr/bin/limits  # for tor
-        - /usr/bin/su      # for tor
-        - /bin/ps          # for tor service to validate /var/run/tor/tor.pid file
-        - /bin/csh         # XXX not sure why csh is needed by tor
-    keep-wildcard:
-        - /usr/lib/pam_*.so     # pam needed for su called by tor
-        - /usr/lib/pam_*.so.*   # --""--
 
 pkg:
-    install: zeronet tor
+    install: zeronet
 
 run:
-    service: tor zeronet
+    service: zeronet
 
 options:
     net:
         outbound: wan
         inbound-tcp:  # zeronet crate listens on the port 43111 forwarded to 43110
             43111: 43110
+    tor:  # enable tor with its optional control port because ZeroNet needs to create hidden services on the fly
+        control-port: true
 
 scripts:
     run:before-start-services:
@@ -31,4 +26,3 @@ scripts:
         - "echo zeronet_args=\"${zeronet_args} --ui_ip 0.0.0.0\" >> /etc/rc.conf"
         - "echo zeronet_args=\"${zeronet_args} --ui_host localhost:43111\" >> /etc/rc.conf"
         - "echo zeronet_args=\"${zeronet_args} --tor always\" >> /etc/rc.conf"
-        - "echo ControlPort 9051 >> /usr/local/etc/tor/torrc"

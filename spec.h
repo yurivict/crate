@@ -27,6 +27,12 @@ public:
     bool allowOutbound() const;
     bool allowInbound() const;
   };
+  class TorOptDetails : public OptDetails {
+  public:
+    TorOptDetails();
+    static TorOptDetails* createDefault();
+    bool controlPort;                 // option to have control port created to be used from inside of the container
+  };
   std::vector<std::string>                           baseKeep;
   std::vector<std::string>                           baseKeepWildcard;
   std::vector<std::string>                           baseRemove;
@@ -50,6 +56,10 @@ public:
   void validate() const;
   bool optionExists(const char* opt) const;
   const NetOptDetails* optionNet() const;
+  const TorOptDetails* optionTor() const;
+private:
+  template<class OptDetailsClass>
+  const OptDetailsClass* getOptionDetails(const char *opt) const;
 };
 
 Spec parseSpec(const std::string &fname);
