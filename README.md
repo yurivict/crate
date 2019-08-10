@@ -19,6 +19,7 @@ The manpage exists but it doesn't explain much yet, it has to be expanded.
 Working examples (only the examples listed here are verified to be working, other examples probably do not work):
 * firefox.yml: you can run the firefox browser. It will run as if it was started for the first time. It will not preserve cookies or user settings across runs. You can simultaneously run any number of instances of the firefox browser, they all will run completely independently.
 * chromium.yml: similarly to firefox.yml, you can create the chromium crate (chromium.crate) which will not preserve cookies, etc., just like firefox
+* chromium+tor.yml: same as chromium.yml but works through the Tor network
 * opera.yml: opera.crate runs, but many sites appear broken, unlike with firefox.crate and chrome.crate
 * kodi.yml: kodi.crate runs but the texts aren't displayed due to missing font dependencies
 * gogs.yml: runs fine, listens on the port 3100, uses the persistent database and settings stored on the host
