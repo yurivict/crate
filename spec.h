@@ -56,10 +56,13 @@ public:
   void validate() const;
   bool optionExists(const char* opt) const;
   const NetOptDetails* optionNet() const;
+  NetOptDetails* optionNetWr() const;
   const TorOptDetails* optionTor() const;
 private:
   template<class OptDetailsClass>
   const OptDetailsClass* getOptionDetails(const char *opt) const;
+  template<class OptDetailsClass>
+  OptDetailsClass* getOptionDetailsWr(const char *opt) const;
 };
 
 Spec parseSpec(const std::string &fname);

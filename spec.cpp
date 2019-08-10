@@ -166,6 +166,10 @@ const Spec::NetOptDetails* Spec::optionNet() const {
   return getOptionDetails<Spec::NetOptDetails>("net");
 }
 
+
+Spec::NetOptDetails* Spec::optionNetWr() const {
+  return getOptionDetailsWr<Spec::NetOptDetails>("net");
+}
 const Spec::TorOptDetails* Spec::optionTor() const {
   return getOptionDetails<Spec::TorOptDetails>("tor");
 }
@@ -176,6 +180,14 @@ const OptDetailsClass* Spec::getOptionDetails(const char *opt) const {
   if (it == options.end())
     return nullptr;
   return static_cast<const OptDetailsClass*>(it->second.get());
+}
+
+template<class OptDetailsClass>
+OptDetailsClass* Spec::getOptionDetailsWr(const char *opt) const {
+  auto it = options.find(opt);
+  if (it == options.end())
+    return nullptr;
+  return static_cast<OptDetailsClass*>(it->second.get());
 }
 
 Spec::TorOptDetails::TorOptDetails()
@@ -481,7 +493,7 @@ Spec parseSpec(const std::string &fname) {
                 }
               } else
                 optVal.reset(Spec::NetOptDetails::createDefault()); // default "net" option details
-            } else if (soptName == "tor") {
+            } else if (soptName == "tor") { // ASSUME that the "tor" option is after the "net" option
               optVal.reset(new Spec::TorOptDetails); // blank "tor" option details
               if (soptVal.IsMap()) {
                 auto optTorDetails = static_cast<Spec::TorOptDetails*>(optVal.get());
@@ -493,6 +505,10 @@ Spec parseSpec(const std::string &fname) {
                     ERR("the invalid value options/tor/" << torOpt.first << " supplied")
                 }
               }
+              // always set options/net/wan for tor
+              if (!spec.optionNet())
+                spec.options["net"].reset(Spec::NetOptDetails::createDefault()); // default "net" option details
+              spec.optionNetWr()->outboundWan = true;
             } else {
               if (!soptVal.IsNull())
                 ERR("options/* values must be empty when options are in the extended format")

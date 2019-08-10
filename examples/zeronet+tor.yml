@@ -18,7 +18,6 @@ run:
 
 options:
     net:
-        outbound: wan
         inbound-tcp:  # zeronet crate listens on the port 43111 forwarded to 43110
             43111: 43110
     tor:  # enable tor with its optional control port because ZeroNet needs to create hidden services on the fly
