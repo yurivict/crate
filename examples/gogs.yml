@@ -1,9 +1,9 @@
----
-
 ##
-## Gogs crate definition.
+## container for Gogs, a painless self-hosted Git service.
 ## It can run a fully functional gogs service out of a container.
 ##
+
+---
 
 # ASSUMES that directories $HOME/gogs/db and $HOME/gogs/log are present
 

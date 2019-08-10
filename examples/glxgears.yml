@@ -1,3 +1,7 @@
+##
+## container for glxgears, an OpenGL test program
+##
+
 ---
 
 pkg:

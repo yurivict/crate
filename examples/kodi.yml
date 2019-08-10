@@ -1,3 +1,9 @@
+##
+## container for Kodi, open source home theater software.
+##
+## Status: this container is currently broken because fonts aren't shown, see https://github.com/xbmc/xbmc/issues/16350
+##
+
 ---
 
 # kodi is broken when run from the crate, it doesn't show texts. See the upstream bug https://github.com/xbmc/xbmc/issues/16350
