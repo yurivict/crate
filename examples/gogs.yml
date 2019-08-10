@@ -34,6 +34,6 @@ files:
 
 options:
     net:
-        outbound: wan
+        outbound: wan dns
         inbound-tcp:  # gogs crate listens on the port 3100 forwarded to 3000
             3100: 3000

@@ -18,7 +18,7 @@ run:
 
 options:
     net:
-        outbound: wan
+        outbound: wan dns  # XXX not sure if DNS is needed for ZeroNet
         inbound-tcp:  # zeronet crate listens on the port 43111 forwarded to 43110
             43111: 43110
 

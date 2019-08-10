@@ -138,20 +138,22 @@ Spec::OptDetails::~OptDetails() {
 Spec::NetOptDetails::NetOptDetails()
 : outboundWan(false),
   outboundLan(false),
-  outboundHost(false)
+  outboundHost(false),
+  outboundDns(false)
 { }
 
 Spec::NetOptDetails* Spec::NetOptDetails::createDefault() {
   // default "net" options allow all outbound and no inbound
   auto d = new NetOptDetails;
-  d->outboundWan = true; // all outbound is allowed by default
-  d->outboundLan = true;
+  d->outboundWan  = true; // all outbound is allowed by default
+  d->outboundLan  = true;
   d->outboundHost = true;
+  d->outboundDns  = true;
   return d;
 }
 
 bool Spec::NetOptDetails::allowOutbound() const {
-  return outboundWan || outboundLan || outboundHost;
+  return outboundWan || outboundLan || outboundHost || outboundDns;
 }
 
 bool Spec::NetOptDetails::allowInbound() const {
@@ -255,7 +257,7 @@ void Spec::validate() const {
   };
 
   // must have something to run
-  if (runCmdExecutable.empty() && runServices.empty())
+  if (runCmdExecutable.empty() && runServices.empty() && !optionExists("tor"))
     ERR("crate has to have either the executable to run, some services to run, or both, it can't have nothing to do")
 
   // must be no duplicate local package overrides
@@ -438,8 +440,11 @@ Spec parseSpec(const std::string &fname) {
         if (itNet != spec.options.end())
           itNet->second.reset(Spec::NetOptDetails::createDefault()); // default "net" option details
         auto itTor = spec.options.find("tor");
-        if (itTor != spec.options.end())
+        if (itTor != spec.options.end()) {
           itTor->second.reset(Spec::TorOptDetails::createDefault()); // default "tor" option details
+          spec.options["net"].reset(new Spec::NetOptDetails); // blank "net" option details
+          spec.optionNetWr()->outboundWan = true; // only WAN, DNS isn't needed for Tor
+        }
       } else if (k.second.IsMap()) {
         // options are a map: they are in the extended format, parse them in a custom fashion, one by one
         std::set<std::string> opts;
@@ -454,6 +459,7 @@ Spec parseSpec(const std::string &fname) {
             const auto &soptVal = k.second[soptName];
             auto &optVal = spec.options[soptName];
             if (soptName == "net") {
+              std::cout << "PARSE SPEC: Net" << std::endl;
               if (soptVal.IsMap()) {
                 optVal.reset(new Spec::NetOptDetails); // blank "net" option details
                 auto optNetDetails = static_cast<Spec::NetOptDetails*>(optVal.get());
@@ -468,6 +474,7 @@ Spec parseSpec(const std::string &fname) {
                         optNetDetails->outboundWan = true;
                         optNetDetails->outboundLan = true;
                         optNetDetails->outboundHost = true;
+                        optNetDetails->outboundDns = true;
                       } else if (v == "none") {
                         if (outboundSet.size() > 1)
                           ERR("net/outbound contains other elements besides 'none'")
@@ -477,6 +484,8 @@ Spec parseSpec(const std::string &fname) {
                         optNetDetails->outboundLan = true;
                       } else if (v == "host") {
                         optNetDetails->outboundHost = true;
+                      } else if (v == "dns") {
+                        optNetDetails->outboundDns = true;
                       } else {
                         ERR("net/outbound contains the unknown element '" << v << "'")
                       }
@@ -502,6 +511,7 @@ Spec parseSpec(const std::string &fname) {
               } else
                 optVal.reset(Spec::NetOptDetails::createDefault()); // default "net" option details
             } else if (soptName == "tor") { // ASSUME that the "tor" option is after the "net" option
+              std::cout << "PARSE SPEC: Tor" << std::endl;
               optVal.reset(new Spec::TorOptDetails); // blank "tor" option details
               if (soptVal.IsMap()) {
                 auto optTorDetails = static_cast<Spec::TorOptDetails*>(optVal.get());
@@ -514,9 +524,9 @@ Spec parseSpec(const std::string &fname) {
                 }
               }
               // always set options/net/wan for tor
-              if (!spec.optionNet())
+              if (!spec.optionExists("net"))
                 spec.options["net"].reset(new Spec::NetOptDetails); // blank "net" option details
-              spec.optionNetWr()->outboundWan = true;
+              spec.optionNetWr()->outboundWan = true; // only WAN, DNS isn't needed for Tor
             } else {
               if (!soptVal.IsNull())
                 ERR("options/* values must be empty when options are in the extended format")

@@ -220,7 +220,8 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
     // determine the hosts's nameserver
     auto nameserverIp = Net::getNameserverIp();
     // copy /etc/resolv.conf into jail
-    Util::Fs::copyFile("/etc/resolv.conf", J("/etc/resolv.conf"));
+    if (optionNet->outboundDns)
+      Util::Fs::copyFile("/etc/resolv.conf", J("/etc/resolv.conf"));
     // create the epipe
     // set the lo0 IP address (lo0 is always automatically present in vnet jails)
     runCommandInJail(STR("ifconfig lo0 inet 127.0.0.1"), "set up the lo0 interface in jail");
@@ -305,9 +306,13 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
 
       // OUT per-epipe rules: 1. whitewashes, 2. bans, 3. nats
       if (optionNet->allowOutbound()) {
-        // always allow DNS requests
-        cmdFW(STR("add " << fwRuleOutNo << " nat " << fwNatOutCommonNo << " udp from " << epipeIpB << " to " << nameserverIp << " 53 out xmit " << gwIface));
-        cmdFW(STR("add " << fwRuleOutNo << " allow udp from " << epipeIpB << " to " << nameserverIp << " 53"));
+        // allow DNS requests if required
+        if (optionNet->outboundDns) {
+          cmdFW(STR("add " << fwRuleOutNo << " nat " << fwNatOutCommonNo << " udp from " << epipeIpB << " to " << nameserverIp << " 53 out xmit " << gwIface));
+          cmdFW(STR("add " << fwRuleOutNo << " allow udp from " << epipeIpB << " to " << nameserverIp << " 53"));
+        } else {
+          cmdFW(STR("add " << fwRuleOutNo << " deny udp from " << epipeIpB << " to any 53"));
+        }
         // bans
         if (!optionNet->outboundHost)
           cmdFW(STR("add " << fwRuleOutNo << " deny ip from " << epipeIpB << " to me"));

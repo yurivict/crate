@@ -21,6 +21,7 @@ public:
     bool outboundWan;                 // allow outbound connections to WAN
     bool outboundLan;                 // allow outbound connections to LAN
     bool outboundHost;                // allow outbound connections to the host
+    bool outboundDns;                 // allow DNS
     std::vector<std::pair<PortRange, PortRange>> inboundPortsTcp;
     std::vector<std::pair<PortRange, PortRange>> inboundPortsUdp;
 
