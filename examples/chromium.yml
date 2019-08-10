@@ -12,7 +12,6 @@ pkg:
     install:
         - chromium
     nuke:
-        - python27
         - python36
         - linux-c7-expat
         - linux-c7-fontconfig
