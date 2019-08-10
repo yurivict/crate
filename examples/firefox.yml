@@ -8,7 +8,6 @@ pkg:
     install:
         - firefox
     nuke:
-        - python27
         - python36
 
 run:
