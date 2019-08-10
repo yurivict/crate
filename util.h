@@ -90,6 +90,7 @@ std::string filePathToBareName(const std::string &path);
 std::string filePathToFileName(const std::string &path);
 int getSysctlInt(const char *name);
 void setSysctlInt(const char *name, int value);
+std::string getSysctlString(const char *name);
 void ensureKernelModuleIsLoaded(const char *name);
 std::string gethostname();
 std::vector<std::string> splitString(const std::string &str, const std::string &delimiter);

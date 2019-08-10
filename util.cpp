@@ -145,13 +145,21 @@ int getSysctlInt(const char *name) {
   int value;
   size_t size = sizeof(value);
 
-  SYSCALL(::sysctlbyname(name, &value, &size, nullptr, 0), "sysctlbyname (get)", name);
+  SYSCALL(::sysctlbyname(name, &value, &size, nullptr, 0), "sysctlbyname (get int)", name);
 
   return value;
 }
 
 void setSysctlInt(const char *name, int value) {
-  SYSCALL(::sysctlbyname(name, nullptr, nullptr, &value, sizeof(value)), "sysctlbyname (set)", name);
+  SYSCALL(::sysctlbyname(name, nullptr, nullptr, &value, sizeof(value)), "sysctlbyname (set int)", name);
+}
+
+std::string getSysctlString(const char *name) {
+  char buf[256];
+  size_t size = sizeof(buf) - 1;
+  SYSCALL(::sysctlbyname(name, buf, &size, nullptr, 0), "sysctlbyname (get string)", name);
+  buf[size] = 0;
+  return buf;
 }
 
 void ensureKernelModuleIsLoaded(const char *name) {
