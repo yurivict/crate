@@ -5,7 +5,7 @@ pkg:
         - meld
 
 run:
-    executable: /usr/local/bin/meld
+    command: /usr/local/bin/meld
 
 options:
     - x11

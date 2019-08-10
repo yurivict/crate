@@ -255,7 +255,7 @@ void Spec::validate() const {
   };
 
   // must have something to run
-  if (runExecutable.empty() && runServices.empty())
+  if (runCmdExecutable.empty() && runServices.empty())
     ERR("crate has to have either the executable to run, some services to run, or both, it can't have nothing to do")
 
   // must be no duplicate local package overrides
@@ -269,9 +269,9 @@ void Spec::validate() const {
   }
 
   // executable must have full path
-  if (!runExecutable.empty())
-    if (!isFullPath(runExecutable))
-      ERR("the executable path has to be a full path, executable=" << runExecutable)
+  if (!runCmdExecutable.empty())
+    if (!isFullPath(runCmdExecutable))
+      ERR("the executable path has to be a full path, executable=" << runCmdExecutable)
 
   // shared directories must be full paths
   for (auto &dirShare : dirsShare)
@@ -379,8 +379,16 @@ Spec parseSpec(const std::string &fname) {
       }
     } else if (isKey(k, "run")) {
       for (auto b : k.second) {
-        if (isKey(b, "executable")) {
-          scalar(b.second, spec.runExecutable, "run/executable");
+        if (isKey(b, "command")) {
+          std::string command;
+          scalar(b.second, command, "run/command");
+          auto space = command.find(' ');
+          if (space == std::string::npos)
+            spec.runCmdExecutable = command;
+          else {
+            spec.runCmdExecutable = command.substr(0, space);
+            spec.runCmdArgs = command.substr(space);
+          }
         } else if (isKey(b, "service")) {
           listOrScalarOnly(b.second, spec.runServices, "run/service");
         } else {

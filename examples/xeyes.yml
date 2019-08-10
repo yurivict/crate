@@ -9,7 +9,7 @@ pkg:
         - xeyes
 
 run:
-    executable: /usr/local/bin/xeyes
+    command: /usr/local/bin/xeyes
 
 options:
     - x11

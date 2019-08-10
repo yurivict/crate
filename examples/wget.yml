@@ -5,7 +5,7 @@ pkg:
         - wget
 
 run:
-    executable: /usr/local/bin/wget
+    command: /usr/local/bin/wget
 
 options:
     - net

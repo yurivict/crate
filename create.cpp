@@ -41,8 +41,8 @@ static gid_t mygid = ::getgid();
 //
 
 static std::string guessCrateName(const Spec &spec) {
-  if (!spec.runExecutable.empty())
-    return spec.runExecutable.substr(spec.runExecutable.rfind('/') + 1);
+  if (!spec.runCmdExecutable.empty())
+    return spec.runCmdExecutable.substr(spec.runCmdExecutable.rfind('/') + 1);
   else {
     std::ostringstream ss;
     ss << *spec.runServices.rbegin();
@@ -161,11 +161,11 @@ static void removeRedundantJailParts(const std::string &jailPath, const Spec &sp
     if (Fs::isElfFileOrDir(J(file)) == 'E')
       toJailPath(getElfDependencies(file, jailPath), except);
   };
-  if (!spec.runExecutable.empty()) {
-    if (isBasePath(spec.runExecutable))
-      except.insert(J(spec.runExecutable));
-    if (Fs::isElfFileOrDir(J(spec.runExecutable)) == 'E')
-      toJailPath(getElfDependencies(spec.runExecutable, jailPath), except);
+  if (!spec.runCmdExecutable.empty()) {
+    if (isBasePath(spec.runCmdExecutable))
+      except.insert(J(spec.runCmdExecutable));
+    if (Fs::isElfFileOrDir(J(spec.runCmdExecutable)) == 'E')
+      toJailPath(getElfDependencies(spec.runCmdExecutable, jailPath), except);
   }
   for (auto &file : spec.baseKeep)
     keepFile(file);
@@ -187,7 +187,7 @@ static void removeRedundantJailParts(const std::string &jailPath, const Spec &sp
     keepFile("/usr/bin/sed");       // needed for /etc/rc.d/netif restart
     keepFile("/bin/kenv");          // needed for /etc/rc.d/netif restart
     keepFile("/usr/sbin/daemon");   // services are often run with daemon(8)
-    if (spec.runExecutable.empty())
+    if (spec.runCmdExecutable.empty())
       keepFile("/bin/sleep");       // our idle script runs
   }
   //keepFile("/sbin/rcorder");        // needed for /etc/rc

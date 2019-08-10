@@ -447,12 +447,12 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
   // run the process
   runScript("run:before-execute");
   int returnCode = 0;
-  if (!spec.runExecutable.empty()) {
+  if (!spec.runCmdExecutable.empty()) {
     LOG("running the command in jail: env=" << jailEnv)
     returnCode = ::system(CSTR("jexec -l -U " << user << " " << jid
                                << " /usr/bin/env " << jailEnv
                                << (spec.optionExists("dbg-ktrace") ? " /usr/bin/ktrace" : "")
-                               << " " << spec.runExecutable << argsToString(argc, argv)));
+                               << " " << spec.runCmdExecutable << spec.runCmdArgs << argsToString(argc, argv)));
     // XXX 256 gets returned, what does this mean?
     LOG("command has finished in jail: returnCode=" << returnCode)
   } else {

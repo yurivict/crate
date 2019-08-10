@@ -7,7 +7,7 @@ pkg:
         - midori
 
 run:
-    executable: /usr/local/bin/midori
+    command: /usr/local/bin/midori
 
 options:
     - net

@@ -12,7 +12,7 @@ pkg:
         - python36
 
 run:
-    executable: /usr/local/bin/firefox
+    command: /usr/local/bin/firefox
 
 options:
     - net

@@ -6,7 +6,7 @@ pkg:
         - dbus
 
 run:
-    executable: /usr/local/bin/qtox
+    command: /usr/local/bin/qtox
 
 options:
     - net

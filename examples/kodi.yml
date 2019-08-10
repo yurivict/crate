@@ -25,7 +25,7 @@ pkg:
         - dejavu
 
 run:
-    executable: /usr/local/bin/kodi
+    command: /usr/local/bin/kodi
 
 options:
     - x11

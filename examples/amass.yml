@@ -9,7 +9,7 @@ pkg:
         - amass
 
 run:
-    executable: /usr/local/bin/amass
+    command: /usr/local/bin/amass
 
 options:
     - net

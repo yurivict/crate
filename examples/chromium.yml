@@ -20,7 +20,7 @@ pkg:
         - linux_base-c7
 
 run:
-    executable: /usr/local/bin/chrome
+    command: /usr/local/bin/chrome
 
 options:
     - net

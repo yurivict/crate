@@ -42,7 +42,8 @@ public:
   std::vector<std::string>                           pkgAdd;                  // 0..oo packages to add
   std::vector<std::string>                           pkgNuke;                 // 0..oo packages to nuke, i.e. delete without regard of them being nominally used
 
-  std::string                                        runExecutable;           // 0..1 executables can be run
+  std::string                                        runCmdExecutable;        // 0..1 executables can be run
+  std::string                                        runCmdArgs;              // can only be set when runCmdExecutable is set, always has a leading space when not blank
   std::vector<std::string>                           runServices;             // 0..oo services can be run
 
   std::vector<std::pair<std::string, std::string>>   dirsShare;               // any number of directories can be shared, {from -> to} mappings are elements

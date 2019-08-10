@@ -1,7 +1,7 @@
 ---
 
 run:
-    executable: /usr/bin/fetch
+    command: /usr/bin/fetch
 
 options:
     - net

@@ -9,7 +9,7 @@ pkg:
         - mesa-demos
 
 run:
-    executable: /usr/local/bin/glxgears
+    command: /usr/local/bin/glxgears
 
 options:
     - x11

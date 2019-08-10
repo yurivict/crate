@@ -18,7 +18,7 @@ pkg:
         - xorg-fonts
 
 run:
-    executable: /usr/local/bin/opera
+    command: /usr/local/bin/opera
 
 options:
     - net
