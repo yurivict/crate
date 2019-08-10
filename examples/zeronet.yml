@@ -18,7 +18,7 @@ run:
 
 options:
     net:
-        outbound: wan dns  # XXX not sure if DNS is needed for ZeroNet
+        outbound: wan dns  # ZeroNet needs DNS to download GeoLite2 city database
         inbound-tcp:  # zeronet crate listens on the port 43111 forwarded to 43110
             43111: 43110
 
