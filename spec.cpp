@@ -23,7 +23,7 @@
   ERR2("spec parser", msg)
 
 // all options
-static std::list<std::string> allOptionsLst = {"x11", "net", "ssl-certs", "tor", "video", "gl", "dbg-ktrace"}; // the order is important for option processing
+static std::list<std::string> allOptionsLst = {"x11", "net", "ssl-certs", "tor", "video", "gl", "no-rm-static-libs", "dbg-ktrace"}; // the order is important for option processing
 static std::set<std::string> allOptionsSet(std::begin(allOptionsLst), std::end(allOptionsLst));
 
 // helpers

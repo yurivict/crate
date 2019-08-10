@@ -258,6 +258,10 @@ static void removeRedundantJailParts(const std::string &jailPath, const Spec &sp
     Fs::rmdirFlat(J("/var/cache/pkg"));
     Fs::rmdirFlat(J("/var/db/pkg"));
   }
+
+  // remove static libs if not requested to keep them
+  if (!spec.optionExists("no-rm-static-libs"))
+    Util::runCommand(STR("find " << jailPath << " -name '*.a' | xargs rm"), "remove static libs");
 }
 
 //
