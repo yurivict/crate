@@ -11,6 +11,12 @@ pkg:
 run:
     command: /usr/local/bin/qbittorrent
 
+dirs:
+    share:  # share the ~/Downloads folder where torrents are downloaded
+        -
+            - $HOME/Downloads
+            - $HOME/Downloads
+
 options:
     - x11
     - net
