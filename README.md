@@ -22,8 +22,8 @@ Working examples (only the examples listed here are verified to be working, othe
 * opera.yml: opera.crate runs, but many sites appear broken, unlike with firefox.crate and chrome.crate
 * kodi.yml: kodi.crate runs but the texts aren't displayed due to missing font dependencies
 * gogs.yml: runs fine, listens on the port 3100, uses the persistent database and settings stored on the host
-* zeronet.yml: runs fine, listens on the port 43111, accesses zero-net network through clear-net, so far only uses internal db (that disappears between runs)
-* zeronet+inner-tor.yml: runs fine, listens on the port 43111, accesses zero-net network through clear-net, so far only uses internal db (that disappears between runs)
+* zeronet.yml: runs fine, listens on the port 43111, accesses zero-net network through clear-net, so far only uses the internal db (that disappears between runs)
+* zeronet+tor.yml: runs fine, listens on the port 43111, accesses zero-net network through the Tor network using the dedicated Tor browser run in the container, so far only uses the internal db (that disappears between runs)
 * amass.yml: runs fine
 * qtox.yml: runs fine in the crate, at the moment doesn't have a persistent state
 * xeyes.yml: runs fine
