@@ -22,7 +22,6 @@ run:
     command: /usr/local/bin/chrome --proxy-server="socks://localhost:9050"
 
 options:
-    - net
     - tor
     - x11
     - gl
