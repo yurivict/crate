@@ -13,6 +13,7 @@
 #include <string>
 #include <set>
 #include <map>
+#include <list>
 #include <iostream>
 #include <sstream>
 
@@ -22,7 +23,8 @@
   ERR2("spec parser", msg)
 
 // all options
-static std::set<std::string> allOptions = {"x11", "net", "ssl-certs", "tor", "video", "gl", "dbg-ktrace"};
+static std::list<std::string> allOptionsLst = {"x11", "net", "ssl-certs", "tor", "video", "gl", "dbg-ktrace"}; // the order is important for option processing
+static std::set<std::string> allOptionsSet(std::begin(allOptionsLst), std::end(allOptionsLst));
 
 // helpers
 static std::string AsString(const YAML::Node &node) {
@@ -271,7 +273,7 @@ void Spec::validate() const {
 
   // options must be from the supported set
   for (auto &o : options)
-    if (allOptions.find(o.first) == allOptions.end())
+    if (allOptionsSet.find(o.first) == allOptionsSet.end())
       ERR("the unknown option '" << o.first << "' was supplied")
 
   // script sections must be from the supported set
@@ -411,7 +413,7 @@ Spec parseSpec(const std::string &fname) {
       }
     } else if (isKey(k, "options")) {
       if (listOrScalar(k.second, spec.options, "options")) {
-        // set details to options that sjupport them
+        // options are a list (simplified format): set details to options that support them
         auto itNet = spec.options.find("net");
         if (itNet != spec.options.end())
           itNet->second.reset(Spec::NetOptDetails::createDefault()); // default "net" option details
@@ -420,76 +422,81 @@ Spec parseSpec(const std::string &fname) {
           itTor->second.reset(Spec::TorOptDetails::createDefault()); // default "tor" option details
       } else if (k.second.IsMap()) {
         // options are a map: they are in the extended format, parse them in a custom fashion, one by one
+        std::set<std::string> opts;
         for (auto lo : k.second) {
-          auto sopt = AsString(lo.first);
-          auto &optVal = spec.options[sopt];
+          auto soptName = AsString(lo.first);
           if (!lo.second.IsMap() && !lo.second.IsNull())
-            ERR("options/net value must be a map or empty when options are in the extended format")
-          if (sopt == "net") {
-            if (lo.second.IsMap()) {
-              optVal.reset(new Spec::NetOptDetails); // blank "net" option details
-              auto optNetDetails = static_cast<Spec::NetOptDetails*>(optVal.get());
-              for (auto netOpt : lo.second) {
-                if (AsString(netOpt.first) == "outbound") {
-                  std::set<std::string> outboundSet;
-                  listOrScalarOnly(netOpt.second, outboundSet, "net/outbound");
-                  for (auto &v : outboundSet)
-                    if (v == "all") {
-                      if (outboundSet.size() > 1)
-                        ERR("net/outbound contains other elements besides 'all'")
-                      optNetDetails->outboundWan = true;
-                      optNetDetails->outboundLan = true;
-                      optNetDetails->outboundHost = true;
-                    } else if (v == "none") {
-                      if (outboundSet.size() > 1)
-                        ERR("net/outbound contains other elements besides 'none'")
-                    } else if (v == "wan") {
-                      optNetDetails->outboundWan = true;
-                    } else if (v == "lan") {
-                      optNetDetails->outboundLan = true;
-                    } else if (v == "host") {
-                      optNetDetails->outboundHost = true;
+            ERR("options/" << soptName << " value must be a map or empty when options are in the extended format")
+          opts.insert(soptName);
+        }
+        for (auto &soptName : allOptionsLst)
+          if (opts.find(soptName) != opts.end()) {
+            const auto &soptVal = k.second[soptName];
+            auto &optVal = spec.options[soptName];
+            if (soptName == "net") {
+              if (soptVal.IsMap()) {
+                optVal.reset(new Spec::NetOptDetails); // blank "net" option details
+                auto optNetDetails = static_cast<Spec::NetOptDetails*>(optVal.get());
+                for (auto netOpt : soptVal) {
+                  if (AsString(netOpt.first) == "outbound") {
+                    std::set<std::string> outboundSet;
+                    listOrScalarOnly(netOpt.second, outboundSet, "net/outbound");
+                    for (auto &v : outboundSet)
+                      if (v == "all") {
+                        if (outboundSet.size() > 1)
+                          ERR("net/outbound contains other elements besides 'all'")
+                        optNetDetails->outboundWan = true;
+                        optNetDetails->outboundLan = true;
+                        optNetDetails->outboundHost = true;
+                      } else if (v == "none") {
+                        if (outboundSet.size() > 1)
+                          ERR("net/outbound contains other elements besides 'none'")
+                      } else if (v == "wan") {
+                        optNetDetails->outboundWan = true;
+                      } else if (v == "lan") {
+                        optNetDetails->outboundLan = true;
+                      } else if (v == "host") {
+                        optNetDetails->outboundHost = true;
+                      } else {
+                        ERR("net/outbound contains the unknown element '" << v << "'")
+                      }
+                  } else if (AsString(netOpt.first) == "inbound-tcp") {
+                    if (listOrScalar(netOpt.second, optNetDetails->inboundPortsTcp, "options")) {
+                    } else if (netOpt.second.IsMap()) {
+                      for (auto portsPair : netOpt.second)
+                        optNetDetails->inboundPortsTcp.push_back({parsePortRange(portsPair.first.as<std::string>()), parsePortRange(portsPair.second.as<std::string>())});
                     } else {
-                      ERR("net/outbound contains the unknown element '" << v << "'")
+                      ERR("options/net/inbound-tcp value must be an array, a scalar or a map")
                     }
-                } else if (AsString(netOpt.first) == "inbound-tcp") {
-                  if (listOrScalar(netOpt.second, optNetDetails->inboundPortsTcp, "options")) {
-                  } else if (netOpt.second.IsMap()) {
-                    for (auto portsPair : netOpt.second)
-                      optNetDetails->inboundPortsTcp.push_back({parsePortRange(portsPair.first.as<std::string>()), parsePortRange(portsPair.second.as<std::string>())});
-                  } else {
-                    ERR("options/net/inbound-tcp value must be an array, a scalar or a map")
-                  }
-                } else if (AsString(netOpt.first) == "inbound-udp") {
-                  if (listOrScalar(netOpt.second, optNetDetails->inboundPortsUdp, "options")) {
-                  } else if (netOpt.second.IsMap()) {
-                    for (auto portsPair : netOpt.second)
-                      optNetDetails->inboundPortsUdp.push_back({parsePortRange(portsPair.first.as<std::string>()), parsePortRange(portsPair.second.as<std::string>())});
-                  } else {
-                    ERR("options/net/inbound-udp value must be an array, a scalar or a map")
-                  }
-                } else
-                  ERR("the invalid value options/net/" << netOpt.first << " supplied")
-              }
-            } else
-              optVal.reset(Spec::NetOptDetails::createDefault()); // default "net" option details
-          } else if (sopt == "tor") {
-            if (lo.second.IsMap()) {
+                  } else if (AsString(netOpt.first) == "inbound-udp") {
+                    if (listOrScalar(netOpt.second, optNetDetails->inboundPortsUdp, "options")) {
+                    } else if (netOpt.second.IsMap()) {
+                      for (auto portsPair : netOpt.second)
+                        optNetDetails->inboundPortsUdp.push_back({parsePortRange(portsPair.first.as<std::string>()), parsePortRange(portsPair.second.as<std::string>())});
+                    } else {
+                      ERR("options/net/inbound-udp value must be an array, a scalar or a map")
+                    }
+                  } else
+                    ERR("the invalid value options/net/" << netOpt.first << " supplied")
+                }
+              } else
+                optVal.reset(Spec::NetOptDetails::createDefault()); // default "net" option details
+            } else if (soptName == "tor") {
               optVal.reset(new Spec::TorOptDetails); // blank "tor" option details
-              auto optTorDetails = static_cast<Spec::TorOptDetails*>(optVal.get());
-              for (auto torOpt : lo.second) {
-                if (AsString(torOpt.first) == "control-port") {
-                  if (!YAML::convert<bool>::decode(torOpt.second, optTorDetails->controlPort))
-                    ERR("options/tor/control-port can't be converted to boolean: " << torOpt.second.as<std::string>())
-                } else
-                  ERR("the invalid value options/tor/" << torOpt.first << " supplied")
+              if (soptVal.IsMap()) {
+                auto optTorDetails = static_cast<Spec::TorOptDetails*>(optVal.get());
+                for (auto torOpt : soptVal) {
+                  if (AsString(torOpt.first) == "control-port") {
+                    if (!YAML::convert<bool>::decode(torOpt.second, optTorDetails->controlPort))
+                      ERR("options/tor/control-port can't be converted to boolean: " << torOpt.second.as<std::string>())
+                  } else
+                    ERR("the invalid value options/tor/" << torOpt.first << " supplied")
+                }
               }
-            } else
-              optVal.reset(Spec::TorOptDetails::createDefault()); // default "tor" option details
-          } else {
-            if (!lo.second.IsNull())
-              ERR("options/* values must be empty when options are in the extended format")
-          }
+            } else {
+              if (!soptVal.IsNull())
+                ERR("options/* values must be empty when options are in the extended format")
+            }
         }
       } else {
         ERR("options are not scalar, list or map")
