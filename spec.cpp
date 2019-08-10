@@ -277,12 +277,12 @@ void Spec::validate() const {
 
   // shared directories must be full paths
   for (auto &dirShare : dirsShare)
-    if (!isFullPath(dirShare.first) || !isFullPath(Util::pathSubstituteVars(dirShare.second)))
+    if (!isFullPath(Util::pathSubstituteVars(dirShare.first)) || !isFullPath(Util::pathSubstituteVars(dirShare.second)))
       ERR("the shared directory paths have to be a full paths, share=" << dirShare.first << "->" << dirShare.second)
 
   // shared files must be full paths
   for (auto &fileShare : filesShare)
-    if (!isFullPath(fileShare.first) || !isFullPath(Util::pathSubstituteVars(fileShare.second)))
+    if (!isFullPath(Util::pathSubstituteVars(fileShare.first)) || !isFullPath(Util::pathSubstituteVars(fileShare.second)))
       ERR("the shared directory paths have to be a full paths, share=" << fileShare.first << "->" << fileShare.second)
 
   // options must be from the supported set
