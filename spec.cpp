@@ -459,7 +459,6 @@ Spec parseSpec(const std::string &fname) {
             const auto &soptVal = k.second[soptName];
             auto &optVal = spec.options[soptName];
             if (soptName == "net") {
-              std::cout << "PARSE SPEC: Net" << std::endl;
               if (soptVal.IsMap()) {
                 optVal.reset(new Spec::NetOptDetails); // blank "net" option details
                 auto optNetDetails = static_cast<Spec::NetOptDetails*>(optVal.get());
@@ -511,7 +510,6 @@ Spec parseSpec(const std::string &fname) {
               } else
                 optVal.reset(Spec::NetOptDetails::createDefault()); // default "net" option details
             } else if (soptName == "tor") { // ASSUME that the "tor" option is after the "net" option
-              std::cout << "PARSE SPEC: Tor" << std::endl;
               optVal.reset(new Spec::TorOptDetails); // blank "tor" option details
               if (soptVal.IsMap()) {
                 auto optTorDetails = static_cast<Spec::TorOptDetails*>(optVal.get());
