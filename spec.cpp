@@ -507,7 +507,7 @@ Spec parseSpec(const std::string &fname) {
               }
               // always set options/net/wan for tor
               if (!spec.optionNet())
-                spec.options["net"].reset(Spec::NetOptDetails::createDefault()); // default "net" option details
+                spec.options["net"].reset(new Spec::NetOptDetails); // blank "net" option details
               spec.optionNetWr()->outboundWan = true;
             } else {
               if (!soptVal.IsNull())
