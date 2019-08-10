@@ -1,0 +1,16 @@
+##
+## container for qBittorrent, a free and reliable P2P Bittorrent client
+## Status: it works but it doesn't exit when the UI is closed: https://github.com/qbittorrent/qBittorrent/issues/11052
+##
+
+---
+
+pkg:
+    install: qbittorrent
+
+run:
+    command: /usr/local/bin/qbittorrent
+
+options:
+    - x11
+    - net

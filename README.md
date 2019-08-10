@@ -27,6 +27,7 @@ Working examples (only the examples listed here are verified to be working, othe
 * zeronet+tor.yml: runs fine, listens on the port 43111, accesses zero-net network through the Tor network using the dedicated Tor browser run in the container, so far only uses the internal db (that disappears between runs)
 * amass.yml: runs fine
 * qtox.yml: runs fine in the crate, at the moment doesn't have a persistent state
+* qbittorrent.yml: runs fine, but doesn't exit when the UI is closed: https://github.com/qbittorrent/qBittorrent/issues/11052
 * xeyes.yml: runs fine
 * gzip.yml: runs fine, it's just the ```gzip``` executable
 
