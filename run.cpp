@@ -310,9 +310,8 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
         if (optionNet->outboundDns) {
           cmdFW(STR("add " << fwRuleOutNo << " nat " << fwNatOutCommonNo << " udp from " << epipeIpB << " to " << nameserverIp << " 53 out xmit " << gwIface));
           cmdFW(STR("add " << fwRuleOutNo << " allow udp from " << epipeIpB << " to " << nameserverIp << " 53"));
-        } else {
-          cmdFW(STR("add " << fwRuleOutNo << " deny udp from " << epipeIpB << " to any 53"));
         }
+        cmdFW(STR("add " << fwRuleOutNo << " deny udp from " << epipeIpB << " to any 53"));
         // bans
         if (!optionNet->outboundHost)
           cmdFW(STR("add " << fwRuleOutNo << " deny ip from " << epipeIpB << " to me"));
