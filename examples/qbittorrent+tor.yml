@@ -1,0 +1,41 @@
+##
+## container for qBittorrent (over Tor), a free and reliable P2P Bittorrent client
+## Status: doesn't work, no DHT connections, I used to be able to run qBittorrent through Tor before, need to figure out what's missing
+##
+
+---
+
+base:
+    keep:
+        - /bin/mkdir
+        - /usr/sbin/chown
+
+pkg:
+    install: qbittorrent
+
+run:
+    command: /usr/local/bin/qbittorrent
+
+dirs:
+    share:  # share the ~/Downloads folder where torrents are downloaded
+        -
+            - $HOME/Downloads
+            - $HOME/Downloads
+
+options:
+    - x11
+    - tor
+
+scripts:
+    run:before-execute:
+        - "mkdir -p $HOME/.config/qBittorrent"
+        - "echo [LegalNotice] >> $HOME/.config/qBittorrent/qBittorrent.conf"
+        - "echo Accepted=true >> $HOME/.config/qBittorrent/qBittorrent.conf"
+        - "echo [Preferences] >> $HOME/.config/qBittorrent/qBittorrent.conf"
+        - "echo 'Connection\\ProxyType=2' >> $HOME/.config/qBittorrent/qBittorrent.conf"
+        - "echo 'Connection\\Proxy\\IP=127.0.0.1' >> $HOME/.config/qBittorrent/qBittorrent.conf"
+        - "echo 'Connection\\Proxy\\Port=9050' >> $HOME/.config/qBittorrent/qBittorrent.conf"
+        - "echo 'Connection\\Proxy\\Authentication=false' >> $HOME/.config/qBittorrent/qBittorrent.conf"
+        - "echo 'Connection\\ProxyForce=true' >> $HOME/.config/qBittorrent/qBittorrent.conf"
+        - "echo 'Connection\\ProxyPeerConnections=true' >> $HOME/.config/qBittorrent/qBittorrent.conf"
+        - "chown -R $USER $HOME/.config"
