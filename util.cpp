@@ -3,11 +3,17 @@
 #include "util.h"
 #include "err.h"
 
+#include <string>
+#include <vector>
+#include <set>
+#include <map>
 #include <iostream>
 #include <iomanip>
+#include <sstream>
 #include <functional>
 #include <filesystem>
 #include <algorithm>
+#include <cctype>
 
 #include <rang.hpp>
 
@@ -203,11 +209,32 @@ unsigned toUInt(const std::string &str) {
   return u;
 }
 
-std::string pathSubstituteVars(const std::string &path) {
+std::string pathSubstituteVarsInPath(const std::string &path) {
   if (path.size() > 5 && path.substr(0, 5) == "$HOME")
     return STR(::getpwuid(myuid)->pw_dir << path.substr(5));
 
   return path;
+}
+
+std::string pathSubstituteVarsInString(const std::string &str) {
+  auto substOne = [](const std::string &str, const std::string &key, const std::string &val) {
+    std::string s = str;
+    while (true) {
+      auto off = s.find(key);
+      if (off != std::string::npos && (off + key.size() == s.size() || !std::isalnum(s[off + key.size()])))
+        s = STR(s.substr(0, off) << val << s.substr(off + key.size()));
+      if (off == std::string::npos)
+        break;
+    }
+    return s;
+  };
+
+  auto uidInfo = ::getpwuid(myuid);
+  std::string s = str;
+  for (auto kv : std::map<std::string, std::string>({{"$HOME", uidInfo->pw_dir}, {"$USER", uidInfo->pw_name}}))
+    s = substOne(s, kv.first, kv.second);
+
+  return s;
 }
 
 std::vector<std::string> reverseVector(const std::vector<std::string> &v) {

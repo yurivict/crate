@@ -401,8 +401,8 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
 
   // share directories if requested
   for (auto &dirShare : spec.dirsShare) {
-    const auto dirJail = Util::pathSubstituteVars(dirShare.first);
-    const auto dirHost = Util::pathSubstituteVars(dirShare.second);
+    const auto dirJail = Util::pathSubstituteVarsInPath(dirShare.first);
+    const auto dirHost = Util::pathSubstituteVarsInPath(dirShare.second);
     // does the host directory exist?
     if (!Util::Fs::dirExists(dirHost))
       ERR("shared directory '" << dirHost << "' doesn't exist on the host, can't run the app")
@@ -414,8 +414,8 @@ bool runCrate(const Args &args, int argc, char** argv, int &outReturnCode) {
 
   // share files if requested
   for (auto &fileShare : spec.filesShare) {
-    const auto fileJail = Util::pathSubstituteVars(fileShare.first);
-    const auto fileHost = Util::pathSubstituteVars(fileShare.second);
+    const auto fileJail = Util::pathSubstituteVarsInPath(fileShare.first);
+    const auto fileHost = Util::pathSubstituteVarsInPath(fileShare.second);
     // do files exist?
     bool fileHostExists = Util::Fs::fileExists(fileHost);
     bool fileJailExists = Util::Fs::fileExists(J(fileJail));

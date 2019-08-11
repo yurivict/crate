@@ -43,7 +43,7 @@ void section(const char *sec, const std::map<std::string, std::map<std::string, 
   auto it = scripts.find(sec);
   if (it != scripts.end())
     for (auto &script : it->second)
-      fnRunner(STR("/bin/sh -c '" << escape(script.second) << "'"));
+      fnRunner(STR("/bin/sh -c '" << escape(Util::pathSubstituteVarsInString(script.second)) << "'"));
 }
 
 }
