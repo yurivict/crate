@@ -5,6 +5,11 @@
 
 ---
 
+base:
+    keep:
+        - /bin/mkdir
+        - /usr/sbin/chown
+
 pkg:
     install: qbittorrent
 
@@ -20,3 +25,10 @@ dirs:
 options:
     - x11
     - net
+
+scripts:
+    run:before-execute:
+        - "mkdir -p $HOME/.config/qBittorrent"
+        - "echo [LegalNotice] >> $HOME/.config/qBittorrent/qBittorrent.conf"
+        - "echo Accepted=true >> $HOME/.config/qBittorrent/qBittorrent.conf"
+        - "chown -R $USER $HOME/.config"
