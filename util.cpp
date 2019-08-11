@@ -17,6 +17,7 @@
 
 #include <rang.hpp>
 
+#define _WITH_GETLINE // it breaks on 11.3 w/out this, but the manpage getline(3) doesn't mention _WITH_GETLINE
 #include <stdlib.h>
 #include <stdio.h>
 #include <fcntl.h>
